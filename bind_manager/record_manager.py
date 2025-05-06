@@ -40,8 +40,29 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
         )  
     
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-    
-    
+      
+def del_record(zone,record_name,record_type, record_value, location_ip_master):
+    correct_type = checker.check_record_type(record_type)
+    if not correct_type:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Invalid record type", "type": record_type}
+        )  
+    zone_exists=checker.zone_existance(zone,location_ip_master)
+    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
+    delete_record(zone,record_name,record_type,record_value,location_ip_master)
+
+def update_record_p(zone,record_name,record_type,record_value,second_value,ttl,location_ip_master,location_ip_forwarder):
+    correct_type =checker.check_record_type(record_type)
+    if not correct_type:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Invalid record type", "type": record_type}
+        )  
+    checker.zone_existance(zone, location_ip_master)
+    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
+    update_record(zone,record_name,record_type,second_value,ttl,location_ip_master,location_ip_forwarder )
+
 def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder):
     match new_record_type:
         case "A":
@@ -187,38 +208,6 @@ def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,loca
         status_code=200,
         detail={"message": "CNAME record added successfully"} 
     )
-
-
-def run_command(zone):
-    remote_user = "shirin"
-    password = "123456"  # Your password for sudo
-    
-    # Command to freeze and thaw the zone
-    command_1 = f"echo {password} | sudo -S /usr/sbin/rndc freeze {zone}"
-    command_2 = f"echo {password} | sudo -S /usr/sbin/rndc thaw {zone}"
-
-    # Execute the freeze command
-    ssh_command = ["ssh", f"{remote_user}@{constants.nameserver}", command_1]
-    result = subprocess.run(ssh_command, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        print(f"Freeze command executed successfully for {zone}!")
-    else:
-        print(f"Error executing freeze command for {zone}: {result.stderr}")
-        return  # Exit if freeze command fails
-
-    # Add a short delay before running the thaw command
-    time.sleep(5)  # Sleep for 2 seconds or adjust based on your needs
-
-    # Execute the thaw command
-    ssh_command = ["ssh", f"{remote_user}@{constants.nameserver}", command_2]
-    result = subprocess.run(ssh_command, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        print(f"Thaw command executed successfully for {zone}!")
-        
-    else:
-        print(f"Error executing thaw command for {zone}: {result.stderr}")
 
 
 
