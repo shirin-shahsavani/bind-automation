@@ -41,7 +41,13 @@ def add_record(record_type:str , detail:RecordDetail ,request:Request, token: An
         location_ip_forwarder
         )
     
+<<<<<<< Updated upstream
     return
+=======
+    # return{
+    #     "message": "The record added"
+    # } 
+>>>>>>> Stashed changes
 
 
 @app.post("/delete/{record_type}/")
@@ -49,6 +55,7 @@ def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Reques
     authenticate_user(request.client.host, token)
     location_ip_master=settings.locations_ip[detail.location]["master"]
     location_ip_forwarder=settings.locations_ip[detail.location]["forwarder_1"]
+<<<<<<< Updated upstream
     bind_manager.checker.check_record_type(record_type)
     bind_manager.checker.zone_existance(detail.zone, location_ip_master)
     bind_manager.checker.record_existance_check_delete(detail.zone ,detail.record_name,record_type.upper(),detail.record_value, location_ip_master)
@@ -57,6 +64,20 @@ def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Reques
             status_code=200,
             detail={"messege":"The record deleted successfully"} ###TODO check
         )  
+=======
+    Delete=record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, location_ip_master,location_ip_forwarder)
+    return {
+        "message": "The record deleted"
+    } 
+>>>>>>> Stashed changes
+
+def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_master, location_ip_forwarder) :
+    result = record_manager.del_record(
+        zone, record_name, record_type, record_value, location_ip_master ,location_ip_forwarder
+    )
+    return result
+
+
 
 @app.post("/update/{record_type}/")
 def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
