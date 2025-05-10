@@ -40,57 +40,8 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
         )  
     
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-<<<<<<< Updated upstream
     
     
-=======
-
-
-def update_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm) 
-    update.add(new_record, ttl, new_record_type, new_record_value)
-    response = dns.query.tcp(update, location_ip_master)
-    print(response)
-    run_apply_command(zone) 
-    check_forwarder_N=1
-    while check_forwarder_N <= 10:
-        checker.check_forwarder_add(zone,new_record,new_record_type, new_record_value,location_ip_master,location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
-        check_forwarder_N += 1
-        print(check_forwarder_N)
-
-def del_record(zone,record_name,record_type, record_value, location_ip_master,location_ip_forwarder):
-    correct_type = checker.check_record_type(record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )  
-    zone_exists=checker.zone_existance(zone,location_ip_master)
-    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    delete_record(zone,record_name,record_type,record_value,location_ip_master)
-    check_forwarder_N=1
-    while check_forwarder_N <= 10:
-        checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
-        check_forwarder_N += 1
-        print(check_forwarder_N)
-
-def update_record_p(zone,record_name,record_type,record_value,second_value,ttl,location_ip_master,location_ip_forwarder):
-    correct_type =checker.check_record_type(record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )  
-    checker.zone_existance(zone, location_ip_master)
-    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    update_record(zone,record_name,record_type,second_value,ttl,location_ip_master,location_ip_forwarder )
-    check_forwarder_N=1
-    while check_forwarder_N <= 10:
-        checker.check_forwarder_add(zone,record_name,record_type, second_value ,location_ip_master,location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
-        check_forwarder_N += 1
-        print(check_forwarder_N)
-
->>>>>>> Stashed changes
 def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder):
     match new_record_type:
         case "A":
@@ -111,7 +62,6 @@ def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, l
            # raise ValueError(f"Unsupported record type: {new_record_type}")
         
 
-<<<<<<< Updated upstream
 def update_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm) 
     update.add(new_record, ttl, new_record_type, new_record_value)
@@ -120,9 +70,6 @@ def update_func(zone,new_record,new_record_type, new_record_value, ttl, location
        #TODO: call freeze and thaw API
     
     #checker.check_forwarder(zone,new_record,new_record_type, new_record_value,location_ip_forwarder)
-=======
-
->>>>>>> Stashed changes
 
 def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
@@ -280,7 +227,6 @@ def delete_record(zone,new_record,new_record_type,record_value,location_ip_maste
     update.delete(new_record, new_record_type)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
-    run_apply_command(zone)
 
 
 
