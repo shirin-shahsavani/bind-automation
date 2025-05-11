@@ -14,24 +14,10 @@ import time
 import dns.reversename
 
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder) :
-    correct_type = checker.check_record_type(new_record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": new_record_type}
-        )  
-    """Checking for the existence of a zone"""
-    zone_exists=checker.zone_existance(zone,location_ip_master)
-    if not zone_exists:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "This zone does not exist", "zone": zone} ###TODO check
-        )  
-    
-
+    correct_type = checker.check_record_type(new_record_type)   ###Checking for correct type
+    zone_exists=checker.zone_existance(zone,location_ip_master) ###Check if a zone exists on the nameserver
     if new_record_type == "PTR":
         return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder)
-
     record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
     if record_exist:
         raise HTTPException(

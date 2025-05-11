@@ -8,18 +8,27 @@ import dns.rdatatype
 
 
 def check_record_type(record_type):
-    return record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]
+    if record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
+        return record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]
+    else:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Invalid record type", "type": record_type}
+        )  
 
 def zone_existance(zone, location_ip_master):
-    print("location_ip_master:",location_ip_master)
     """Check if a zone exists on the nameserver."""
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [location_ip_master]
     try:
-        zone_existence = resolver.resolve(zone, "SOA", lifetime=3)   
+        resolver.resolve(zone, "SOA", lifetime=3)   
         return True
     except Exception as e: 
-        return False
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "This zone does not exist or not availble.", "zone": zone} ###TODO check
+        )  
+
 
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
