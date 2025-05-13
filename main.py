@@ -10,7 +10,7 @@ import constants
 import uvicorn 
 from utilities import authenticate_user
 import bind_manager
-###############################################
+
 settings=constants.Settings()
 app = FastAPI()
 
@@ -29,18 +29,11 @@ def add_record(record_type:str , detail:RecordDetail ,request:Request, token: An
     authenticate_user(request.client.host, token)
     location_ip_master=settings.locations_ip[detail.location]["master"]
     location_ip_forwarder=settings.locations_ip[detail.location]["forwarder_1"]
-    A=record_manager.add_record(
-        detail.zone,
-        detail.record_name,
-        record_type.upper(),
-        detail.record_value, 
-        detail.ttl, 
-        detail.priority,
-        location_ip_master,
-        location_ip_forwarder
-        )
+    Add=record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder)
     
-    return
+    return{
+        "message": "The record added"
+    } 
 
 
 
