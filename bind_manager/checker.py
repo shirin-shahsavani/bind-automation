@@ -1,25 +1,40 @@
 from fastapi import HTTPException
 import constants
-import dns.query   #to use axfr 
+import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.tsigkeyring   #authenticate
 import dns.resolver   #chech zone
 import dns.rdatatype
+import requests
+from cryptography.fernet import Fernet
+from bind_manager import record_manager
+import main
 
+
+check_forwarder_N = 1
 
 def check_record_type(record_type):
-    return record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]
+    if record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
+        return record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]
+    else:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Invalid record type", "type": record_type}
+        )
 
 def zone_existance(zone, location_ip_master):
-    print("location_ip_master:",location_ip_master)
     """Check if a zone exists on the nameserver."""
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [location_ip_master]
     try:
-        zone_existence = resolver.resolve(zone, "SOA", lifetime=3)   
+        resolver.resolve(zone, "SOA", lifetime=3)
         return True
-    except Exception as e: 
-        return False
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "This zone does not exist or not availble.", "zone": zone} ###TODO check
+        )
+
 
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
@@ -45,23 +60,23 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
     for name, node in zone_data.nodes.items():
         for rdataset in node.rdatasets:
             record_type = dns.rdatatype.to_text(rdataset.rdtype)
-            records.append(f"{name}.{zone} {record_type}")         
+            records.append(f"{name}.{zone} {record_type}")
+
+
+
             if str(name)==new_record and record_type == new_record_type:
                 check_the_value(zone,new_record, new_record_type, record_value ,location_ip_master)
                 return True
-                
+
+
+
+
     else:
         raise HTTPException(
             status_code=403,
             detail={"messege":"The record does not exist"} ###TODO check
     )
 
-<<<<<<< Updated upstream
-def check_forwarder(zone,new_record,new_record_type, new_record_value,location_ip_forwarder):
-    print (location_ip_forwarder)
-    resolver = dns.resolver.Resolver()
-    resolver.nameservers = [location_ip_forwarder]
-=======
 
 def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
     #check_forwarder_N=1
@@ -84,9 +99,16 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
                     resolved_ips.append(str(item))
         if new_record_value in resolved_ips:
             print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
+
             check_forwarder_N = 10
-            #print(check_forwarder_N)
+          #  raise HTTPException(
+          #      status_code=200,
+          #      detail={"message": "Added : Forwarder updated"}
+          #  )
+            print(check_forwarder_N)
             return check_forwarder_N
+
+
         else:
             print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
             return
@@ -94,7 +116,7 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
     if new_record_type in ["PTR"]:
         PTR_record=f"{new_record}.{zone}"
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
-        query.flags |= dns.flags.RD 
+        query.flags |= dns.flags.RD
         response = None
         resolved_ips = []
         try:
@@ -113,15 +135,15 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
         if new_record_value in cleaned:
             print(f"Domain {PTR_record} resolves to the expected IP: {new_record_value}")
-            
+
             check_forwarder_N = 10
             raise HTTPException(
                 status_code=200,
-                detail={"message": "Forwarder updated"} 
+                detail={"message": "Forwarder updated"}
             )
         else:
             print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
-            
+
             return
 
 
@@ -134,7 +156,6 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
         print("fqdn=", fqdn)
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD  # Recursion Desired flag
-        response = None
         resolved_ips = []
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
@@ -146,22 +167,22 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
             for answer in response.answer:
                 for item in answer.items:
                     resolved_ips.append(str(item))
-        if  resolved_ips == []:
+        if not resolved_ips:
             print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
-            
+
             check_forwarder_N = 10
             raise HTTPException(
                 status_code=200,
-                detail={"message": "Forwarder updated"} 
+                detail={"message": "Forwarder updated"}
             )
         else:
             print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-            
+
             reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
         main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
         raise HTTPException(
                 status_code=404,
-                detail={"message": "Forwarder is not responding and the record deleted"} 
+                detail={"message": "Forwarder is not responding and the record deleted"}
             )
     elif new_record_type == "MX":
         new_record_check = ' '.join(new_record_value.split()[1:]).rstrip('.')
@@ -182,7 +203,7 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
         check_forwarder_N = 10
         raise HTTPException(
             status_code=200,
-            detail={"message": "Forwarder updated"} 
+            detail={"message": "Forwarder updated"}
         )
     else:
         print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
@@ -190,7 +211,7 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
     main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
     raise HTTPException(
             status_code=404,
-            detail={"message": "Forwarder is not responding and the record deleted"} 
+            detail={"message": "Forwarder is not responding and the record deleted"}
 
         )
 
@@ -206,45 +227,15 @@ def reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_
     token = cipher_suite.encrypt(client_ip.encode()).decode()
 
     headers = {"token": token}
->>>>>>> Stashed changes
 
     try:
-        if new_record_type in ["A" ,"AAAA"] :
-            fqdn = f"{new_record}.{zone}".lower()
-            answers = resolver.resolve(fqdn,new_record_type)
-            print(answers)
-            resolved_ips = [str(answer) for answer in answers]
-            print("Resolved IP addresses:", resolved_ips)
-            if new_record_value in resolved_ips:
-                print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
-            else:
-                print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-                raise HTTPException(
-                    status_code=409,
-                    detail={"error":"Ip does not match"}
-            )
+        r = requests.get(api2_url, headers=headers, timeout=5)
+        print("Reloaded")
+        check_forwarder_add(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
+    except requests.RequestException as e:
+        print("Failed to call API:", e)
 
-        
-        elif new_record_type == "MX":
-            new_record_check= ' '.join(new_record_value.split()[1:]).rstrip('.')
-            answers = resolver.resolve(zone, "MX")
-            resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
-            #print(f"Resolved MX records: {resolved_values}")
-            print('search for: ', new_record_check)
-            if new_record_check.lower() in resolved_values:
-                print(f"Domain {zone} has the expected MX record: {new_record_value}")
-            else:
-                print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
 
-        else: 
-            print ("Forwarder didn't check")
-
-    except:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Forwarder Error"} ###TODO check
-        )  
-    
 def check_the_value(zone,record_name,record_type, record_value,location_ip_master):
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [location_ip_master]
@@ -265,7 +256,7 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
                     detail={"error":"Ip does not match"}
             )
 
-        
+
         elif record_type == "MX":
             answers = resolver.resolve(zone, "MX")
             resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
@@ -282,11 +273,12 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
             )
 
 
-        else: 
+        else:
             print ("Value didn't check")
 
     except:
         raise HTTPException(
             status_code=404,
             detail={"error": "value error"} ###TODO check
-        ) 
+        )
+

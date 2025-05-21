@@ -1,19 +1,12 @@
-from bind_manager import checker
 from fastapi import HTTPException
 import constants
-import subprocess
-import time
-import dns.query   #to use axfr 
+import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.update    #add record
 import dns.tsigkeyring   #authenticate
 import dns.resolver   #chech zone
 import dns.rdatatype
-import subprocess
-import time
 import dns.reversename
-<<<<<<< Updated upstream
-=======
 import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
@@ -21,57 +14,23 @@ from bind_manager import checker
 #check_forwarder_N = 1
 
 
->>>>>>> Stashed changes
 
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder) :
-    correct_type = checker.check_record_type(new_record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": new_record_type}
-        )  
-    """Checking for the existence of a zone"""
-    zone_exists=checker.zone_existance(zone,location_ip_master)
-    if not zone_exists:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "This zone does not exist", "zone": zone} ###TODO check
-        )  
-    
-
+    correct_type = checker.check_record_type(new_record_type)   ###Checking for correct type
+    zone_exists=checker.zone_existance(zone,location_ip_master) ###Check if the zone exists on the nameserver
     if new_record_type == "PTR":
+        print(new_record_type)
         return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder)
+    else:
+        record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
+        if record_exist:
+            print(new_record_type)
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "This record exist"} ###TODO check
+            )
 
-    record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
-    if record_exist:
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "This record exist"} ###TODO check
-        )  
-    
-    return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-      
-def del_record(zone,record_name,record_type, record_value, location_ip_master):
-    correct_type = checker.check_record_type(record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )  
-    zone_exists=checker.zone_existance(zone,location_ip_master)
-    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    delete_record(zone,record_name,record_type,record_value,location_ip_master)
-
-def update_record_p(zone,record_name,record_type,record_value,second_value,ttl,location_ip_master,location_ip_forwarder):
-    correct_type =checker.check_record_type(record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )  
-    checker.zone_existance(zone, location_ip_master)
-    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    update_record(zone,record_name,record_type,second_value,ttl,location_ip_master,location_ip_forwarder )
+        return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
 
 def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder):
     match new_record_type:
@@ -91,14 +50,12 @@ def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, l
             add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
         #case _:
            # raise ValueError(f"Unsupported record type: {new_record_type}")
-        
-<<<<<<< Updated upstream
-=======
+
 def trigger_reload(zone):
     api2_url = f"http://10.60.110.229:8000/{zone}/reload/"
     key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
     cipher_suite = Fernet(key)
-    client_ip = '10.60.110.226'
+    client_ip = '10.60.60.230'
     token = cipher_suite.encrypt(client_ip.encode()).decode()
 
     headers = {"token": token}
@@ -106,13 +63,13 @@ def trigger_reload(zone):
         r = requests.get(api2_url, headers=headers, timeout=5)
     except requests.RequestException as e:
         raise HTTPException(status_code=404, detail={"error": "Forwarder error after retries"})
-    
+
 def run_apply(zone):
     api1_url = f"http://10.60.110.227:8000/{zone}/apply/"
     key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
     #key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
     cipher_suite = Fernet(key)
-    client_ip = '10.60.110.226'
+    client_ip = '10.60.60.230'
     token = cipher_suite.encrypt(client_ip.encode()).decode()
 
     headers = {"token": token}
@@ -120,35 +77,36 @@ def run_apply(zone):
         r = requests.get(api1_url, headers=headers, timeout=5)
     except requests.RequestException as e:
         raise HTTPException(status_code=404, detail={"error": "The master did not update"})
->>>>>>> Stashed changes
 
 def update_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm) 
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
-<<<<<<< Updated upstream
-    print(response)
-       #TODO: call freeze and thaw API
-=======
     print (response)
     run_apply(zone)
     if new_record_type in ["A" , "AAAA" , "PTR"]:
-        #print( check_forwarder_N)
+        print( check_forwarder_N)
         while check_forwarder_N <= 10:
            if check_forwarder_N < 9:
                 result = checker.check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
                 if result == 10:
-                    check_forwarder_N = 10 
+                    check_forwarder_N = 10  # success, go on
                     continue
                 trigger_reload(zone)
                 check_forwarder_N += 1
                 print("forwarder did not answer, reloading ...")
+           # print ("check_forwarder_N =" , checker.check_forwarder_add.check_forwarder_N )
+                #if result  < 9:
+                # checker.check_forwarder_add(zone,new_record,new_record_type, new_record_value,location_ip_master,location_ip_forwarder)
+                # trigger_reload(zone)
+                # check_forwarder_N += 1
+                # print ("forwarder did not answer , reloading ...")
            elif check_forwarder_N == 9:
                  delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master,location_ip_forwarder)
                  raise HTTPException(
                       status_code=404,
                       detail={"message": "Forwarder is not responding and the record deleted"}
-       		      )
+                      )
            elif check_forwarder_N == 10:
                 print ("check_forwarder_N =" , check_forwarder_N )
                 ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
@@ -163,7 +121,7 @@ def del_record(zone,record_name,record_type, record_value, location_ip_master,lo
         raise HTTPException(
             status_code=405,
             detail={"error": "Invalid record type", "type": record_type}
-        )  
+        )
     zone_exists=checker.zone_existance(zone,location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
@@ -172,19 +130,41 @@ def del_record(zone,record_name,record_type, record_value, location_ip_master,lo
         checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
         check_forwarder_N += 1
         print(check_forwarder_N)
->>>>>>> Stashed changes
-    
-    #checker.check_forwarder(zone,new_record,new_record_type, new_record_value,location_ip_forwarder)
+
+
+
+def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_master, location_ip_forwarder) :
+    correct_type = checker.check_record_type(record_type)
+    zone_exists=checker.zone_existance(zone,location_ip_master)
+    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
+    delete_record(zone,record_name,record_type,record_value,location_ip_master)
+
+def update_record_p(zone,record_name,record_type,record_value,second_value,ttl, location_ip_master,location_ip_forwarder):
+    correct_type =checker.check_record_type(record_type)
+    if not correct_type:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Invalid record type", "type": record_type}
+        )
+    checker.zone_existance(zone, location_ip_master)
+    checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
+    update_record(zone,record_name,record_type,second_value,ttl,location_ip_master,location_ip_forwarder )
+    check_forwarder_N=1
+    while check_forwarder_N <= 10:
+        checker.check_forwarder_add(zone,record_name,record_type, second_value ,location_ip_master,location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
+        check_forwarder_N += 1
+        print(check_forwarder_N)
+
+
+
+
 
 def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
     ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
     ptr_name = new_record_value.split(".")[-1]
     ptr_value=f"{new_record}.{zone}."
-<<<<<<< Updated upstream
-=======
     print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
->>>>>>> Stashed changes
     update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
     #TODO: return status
 
@@ -220,21 +200,21 @@ def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, locati
     ptr_records=get_all_ptr_records(zone, location_ip_master)
     targets_only = [record[1] for record in ptr_records]
     if new_record_value in targets_only:
-        print("The value of record exists for this PTR record")
         raise HTTPException(
                 status_code=409,
                 detail={"error":"The value of the PTR record exists"}
         )
     else:
+        print((zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder))
         update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
         raise HTTPException(
             status_code=200,
-            detail={"message": "record added successfully"} 
+            detail={"message": "record added successfully"}
         )
 
 def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-    
+
 def add_MX_A_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master, location_ip_forwarder , mx_priority=10):
     new_record_type= "A"
     add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
@@ -246,27 +226,27 @@ def add_MX_A_record(zone,new_record, new_record_type,new_record_value, ttl,locat
     raise HTTPException(
         status_code=200,
         detail={"message": "record added successfully"} ###TODO check
-    )  
+    )
 
 def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
     raise HTTPException(
             status_code=200,
-            detail={"message": "record added successfully"} 
+            detail={"message": "record added successfully"}
         )
 
-  
+
 def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder):
     new_ns_record = f"{new_record}.{zone}."
     keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
 
-    
+
     try:
         zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(constants.key_name),keyalgorithm=constants.key_algorithm))
     except Exception as e:
         print(f"AXFR failed: {e}")
         return
-    
+
     record_found = False
     for name, node in zone_data.nodes.items():
         for rdataset in node.rdatasets:
@@ -285,35 +265,33 @@ def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,locat
 
         print(f"Adding NS record for {zone} → {new_ns_record}")
         update_func(zone, "@", "NS", f"{new_record}", ttl, location_ip_master, location_ip_forwarder)
-        
+
         raise HTTPException(
             status_code=200,
             detail={"message": "NS & A record added successfully"} ###TODO check
-    )  
- 
+    )
+
 def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
     raise HTTPException(
         status_code=200,
-        detail={"message": "CNAME record added successfully"} 
+        detail={"message": "CNAME record added successfully"}
     )
 
 
 
 def delete_record(zone,new_record,new_record_type,record_value,location_ip_master):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm) 
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.delete(new_record, new_record_type)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
+    run_apply(zone)
 
 
 
 def update_record(zone,record_name,record_type,  new_record_value,ttl, location_ip_master, location_ip_forwarder):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm) 
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.replace(record_name, ttl, record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
-<<<<<<< Updated upstream
-=======
     run_apply(zone)
->>>>>>> Stashed changes
