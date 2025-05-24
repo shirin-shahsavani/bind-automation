@@ -11,7 +11,6 @@ import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
 
-#check_forwarder_N = 1
 
 
 
@@ -48,11 +47,9 @@ def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, l
             add_NS_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
         case "CNAME":
             add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-        #case _:
-           # raise ValueError(f"Unsupported record type: {new_record_type}")
 
-def trigger_reload(zone):
-    api2_url = f"http://10.60.110.229:8000/{zone}/reload/"
+def trigger_reload(zone,location_ip_forwarder):
+    api2_url = f"http://{location_ip_forwarder}:8000/{zone}/reload/"
     key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
     cipher_suite = Fernet(key)
     client_ip = '10.60.60.230'
@@ -64,8 +61,8 @@ def trigger_reload(zone):
     except requests.RequestException as e:
         raise HTTPException(status_code=404, detail={"error": "Forwarder error after retries"})
 
-def run_apply(zone):
-    api1_url = f"http://10.60.110.227:8000/{zone}/apply/"
+def run_apply(zone,location_ip_master):
+    api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
     key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
     #key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
     cipher_suite = Fernet(key)
@@ -83,7 +80,7 @@ def update_func(zone,new_record,new_record_type, new_record_value, ttl, location
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     print (response)
-    run_apply(zone)
+    run_apply(zone,location_ip_master)
     if new_record_type in ["A" , "AAAA" , "PTR"]:
         print( check_forwarder_N)
         while check_forwarder_N <= 10:
@@ -92,9 +89,9 @@ def update_func(zone,new_record,new_record_type, new_record_value, ttl, location
                 if result == 10:
                     check_forwarder_N = 10  # success, go on
                     continue
-                trigger_reload(zone)
+                trigger_reload(zone,location_ip_forwarder)
                 check_forwarder_N += 1
-                print("forwarder did not answer, reloading ...")
+                print(f"forwarder did not answer, reloading ...{zone}")
            # print ("check_forwarder_N =" , checker.check_forwarder_add.check_forwarder_N )
                 #if result  < 9:
                 # checker.check_forwarder_add(zone,new_record,new_record_type, new_record_value,location_ip_master,location_ip_forwarder)
@@ -166,10 +163,14 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
     ptr_value=f"{new_record}.{zone}."
     print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
     update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
-    #TODO: return status
 
 
 def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder):
+    if int(new_record) >= 255:
+        raise HTTPException(
+            status_code=405,
+            detail={"error": "Value of PTR record can't be more than 254", "ptr_record": new_record}
+        )
     def get_all_ptr_records(zone_name, location_ip_master):
         try:
             zone = dns.zone.from_xfr(
@@ -285,7 +286,7 @@ def delete_record(zone,new_record,new_record_type,record_value,location_ip_maste
     update.delete(new_record, new_record_type)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
-    run_apply(zone)
+    run_apply(zone,location_ip_master)
 
 
 
@@ -294,4 +295,4 @@ def update_record(zone,record_name,record_type,  new_record_value,ttl, location_
     update.replace(record_name, ttl, record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
-    run_apply(zone)
+    run_apply(zone,location_ip_master)

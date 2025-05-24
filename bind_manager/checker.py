@@ -7,8 +7,8 @@ import dns.resolver   #chech zone
 import dns.rdatatype
 import requests
 from cryptography.fernet import Fernet
-from bind_manager import record_manager
 import main
+
 
 
 check_forwarder_N = 1
@@ -79,13 +79,11 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
 
 
 def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    #check_forwarder_N=1
     if new_record_type in ["A", "AAAA"]:
         fqdn = f"{new_record}.{zone}"
         print("fqdn=", fqdn)
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD  # Recursion Desired flag
-        response = None
         resolved_ips = []
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
@@ -99,25 +97,18 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
                     resolved_ips.append(str(item))
         if new_record_value in resolved_ips:
             print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
-
             check_forwarder_N = 10
-          #  raise HTTPException(
-          #      status_code=200,
-          #      detail={"message": "Added : Forwarder updated"}
-          #  )
             print(check_forwarder_N)
             return check_forwarder_N
 
 
         else:
             print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-            return
 
     if new_record_type in ["PTR"]:
         PTR_record=f"{new_record}.{zone}"
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD
-        response = None
         resolved_ips = []
         try:
            response = dns.query.udp(query, location_ip_forwarder, timeout=3)
@@ -129,7 +120,7 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
             for answer in response.answer:
                 for item in answer.items:
                     resolved_ips.append(str(item))
-        suffix =  f".{zone}."           ########## '.55.168.192.in-addr.arpa.'
+        suffix =  f".{zone}."
 
         print (suffix)
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
@@ -139,12 +130,12 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
             check_forwarder_N = 10
             raise HTTPException(
                 status_code=200,
-                detail={"message": "Forwarder updated"}
+                detail={"message": "Record added and the forwarder Checked"}
             )
         else:
             print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
 
-            return
+    return None
 
 
  ###################################################################################
