@@ -8,6 +8,7 @@ import dns.rdatatype
 import requests
 from cryptography.fernet import Fernet
 import main
+import ipaddress
 
 
 
@@ -15,15 +16,14 @@ check_forwarder_N = 1
 
 def check_record_type(record_type):
     if record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
-        return record_type in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]
-    else:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )
+        return True
+
+    raise HTTPException(
+        status_code=405,
+        detail={"error": "Invalid record type", "type": record_type}
+    )
 
 def zone_existance(zone, location_ip_master):
-    """Check if a zone exists on the nameserver."""
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [location_ip_master]
     try:
@@ -67,10 +67,6 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             if str(name)==new_record and record_type == new_record_type:
                 check_the_value(zone,new_record, new_record_type, record_value ,location_ip_master)
                 return True
-
-
-
-
     else:
         raise HTTPException(
             status_code=403,
@@ -79,9 +75,8 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
 
 
 def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    if new_record_type in ["A", "AAAA"]:
+    if new_record_type in ["A" , "AAAA"]:
         fqdn = f"{new_record}.{zone}"
-        print("fqdn=", fqdn)
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD  # Recursion Desired flag
         resolved_ips = []
@@ -92,18 +87,30 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
             response = None
 
         if response and response.answer:
-            for answer in response.answer:
-                for item in answer.items:
-                    resolved_ips.append(str(item))
-        if new_record_value in resolved_ips:
-            print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
-            check_forwarder_N = 10
-            print(check_forwarder_N)
-            return check_forwarder_N
+            resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+        if new_record_type == "A":
+            if new_record_value in resolved_ips:
+                print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
+                check_forwarder_N = 10
+                return check_forwarder_N
+            else:
+                print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
+        if new_record_type == "AAAA":
+            try:
+                expected_ip = ipaddress.IPv6Address(new_record_value)
+                normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
+
+                if expected_ip in normalized_resolved:
+                    print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
+                    check_forwarder_N = 10
+                    return check_forwarder_N
+                else:
+                    print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
+
+            except Exception as e:
+                print(f"Invalid IPv6 address provided: {e}")
 
 
-        else:
-            print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
 
     if new_record_type in ["PTR"]:
         PTR_record=f"{new_record}.{zone}"
@@ -128,12 +135,31 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
             print(f"Domain {PTR_record} resolves to the expected IP: {new_record_value}")
 
             check_forwarder_N = 10
-            raise HTTPException(
-                status_code=200,
-                detail={"message": "Record added and the forwarder Checked"}
-            )
+            # raise HTTPException(
+            #     status_code=200,
+            #     detail={"message": "Record added and the forwarder Checked"}
+            # )
+            return check_forwarder_N
+
         else:
             print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
+    if new_record_type in ["MX"] :
+        print("###########################")
+        new_record_check= ' '.join(new_record_value.split()[1:]).rstrip('.')
+        print ("new_record_check:",new_record_check)
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_forwarder]
+        answers = resolver.resolve(zone, "MX")
+        resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
+        print(resolved_values)
+        print('search for: ', new_record_check)
+        if new_record_check.lower() in resolved_values:
+            print("hiiiiiiiiiiiiiiiiiiiiiiii")
+            print(f"Domain MX resolves to the expected IP: {new_record_check}")
+            check_forwarder_N = 10
+
+        else:
+            print(f"Domain MX exists, but IP does not match. Found: {resolved_values}")
 
     return None
 
@@ -207,24 +233,24 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
         )
 
 
-def reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder):
-    global check_forwarder_N
-    command = "reload"
-    api2_url = f"http://192.168.55.154:8000/{zone}/{command}/"
+# def reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder):
+#     global check_forwarder_N
+#     command = "reload"
+#     api2_url = f"http://192.168.55.154:8000/{zone}/{command}/"
 
-    key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
-    cipher_suite = Fernet(key)
-    client_ip = '192.168.55.1'
-    token = cipher_suite.encrypt(client_ip.encode()).decode()
-
-    headers = {"token": token}
-
-    try:
-        r = requests.get(api2_url, headers=headers, timeout=5)
-        print("Reloaded")
-        check_forwarder_add(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
-    except requests.RequestException as e:
-        print("Failed to call API:", e)
+    # key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
+    # cipher_suite = Fernet(key)
+    # client_ip = '192.168.55.1'
+    # token = cipher_suite.encrypt(client_ip.encode()).decode()
+    #
+    # headers = {"token": token}
+    #
+    # try:
+    #     r = requests.get(api2_url, headers=headers, timeout=5)
+    #     print("Reloaded")
+    #     check_forwarder_add(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
+    # except requests.RequestException as e:
+    #     print("Failed to call API:", e)
 
 
 def check_the_value(zone,record_name,record_type, record_value,location_ip_master):
@@ -246,27 +272,29 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
                     status_code=409,
                     detail={"error":"Ip does not match"}
             )
+        return
 
 
-        elif record_type == "MX":
-            answers = resolver.resolve(zone, "MX")
-            resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
-            #print(f"Resolved MX records: {resolved_values}")
-            print('search for: ', record_value)
-            if record_value.lower() in resolved_values:
-                print(f"Domain {zone} has the expected MX record: {record_value}")
-                return True
-            else:
-                print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
-                raise HTTPException(
-                    status_code=409,
-                    detail={"error":"The value is not correct"}
-            )
+        # elif record_type == "MX":
+        #     answers = resolver.resolve(zone, "MX")
+        #     resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
+        #     #print(f"Resolved MX records: {resolved_values}")
+        #     print('search for: ', record_value)
+        #     if record_value.lower() in resolved_values:
+        #         print(f"Domain {zone} has the expected MX record: {record_value}")
+        #         return True
+        #     else:
+        #         print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
+        #         raise HTTPException(
+        #             status_code=409,
+        #             detail={"error":"The value is not correct"}
+        #     )
+        #
 
-
-        else:
-            print ("Value didn't check")
-
+        # else:
+        #     print ("Value didn't check")
+        #
+        #
     except:
         raise HTTPException(
             status_code=404,
