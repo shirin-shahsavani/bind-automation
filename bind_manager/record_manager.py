@@ -10,7 +10,7 @@ import dns.reversename
 import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
-
+from dns import resolver
 
 
 
@@ -48,41 +48,14 @@ def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, l
         case "CNAME":
             add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
 
-def trigger_reload(zone,location_ip_forwarder):
-    api2_url = f"http://{location_ip_forwarder}:8000/{zone}/reload/"
-    key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
-    cipher_suite = Fernet(key)
-    client_ip = '10.60.60.230'
-    token = cipher_suite.encrypt(client_ip.encode()).decode()
-
-    headers = {"token": token}
-    try:
-        r = requests.get(api2_url, headers=headers, timeout=5)
-    except requests.RequestException as e:
-        raise HTTPException(status_code=404, detail={"error": "Forwarder error after retries"})
-
-def run_apply(zone,location_ip_master):
-    api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
-    key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
-    #key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
-    cipher_suite = Fernet(key)
-    client_ip = '10.60.60.230'
-    token = cipher_suite.encrypt(client_ip.encode()).decode()
-
-    headers = {"token": token}
-    try:
-        r = requests.get(api1_url, headers=headers, timeout=5)
-    except requests.RequestException as e:
-        raise HTTPException(status_code=404, detail={"error": "The master did not update"})
 
 def update_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
-    print (response)
     run_apply(zone,location_ip_master)
     if new_record_type in ["A" , "AAAA" , "PTR"]:
-        print( check_forwarder_N)
+        print(new_record_type)
         while check_forwarder_N <= 10:
            if check_forwarder_N < 9:
                 result = checker.check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
@@ -92,12 +65,6 @@ def update_func(zone,new_record,new_record_type, new_record_value, ttl, location
                 trigger_reload(zone,location_ip_forwarder)
                 check_forwarder_N += 1
                 print(f"forwarder did not answer, reloading ...{zone}")
-           # print ("check_forwarder_N =" , checker.check_forwarder_add.check_forwarder_N )
-                #if result  < 9:
-                # checker.check_forwarder_add(zone,new_record,new_record_type, new_record_value,location_ip_master,location_ip_forwarder)
-                # trigger_reload(zone)
-                # check_forwarder_N += 1
-                # print ("forwarder did not answer , reloading ...")
            elif check_forwarder_N == 9:
                  delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master,location_ip_forwarder)
                  raise HTTPException(
@@ -105,12 +72,17 @@ def update_func(zone,new_record,new_record_type, new_record_value, ttl, location
                       detail={"message": "Forwarder is not responding and the record deleted"}
                       )
            elif check_forwarder_N == 10:
-                print ("check_forwarder_N =" , check_forwarder_N )
-                ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-                ptr_name = new_record_value.split(".")[-1]
-                ptr_value=f"{new_record}.{zone}."
-                print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
-                update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                if new_record_type == "A":
+                    print ("check_forwarder_N =" , check_forwarder_N )
+                    ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+                    ptr_name = new_record_value.split(".")[-1]
+                    ptr_value=f"{new_record}.{zone}."
+                    print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    return
+                elif new_record_type == "AAAA" or new_record_type == "PTR" or new_record_type == "MX":
+                    print("your record type is",new_record_type)
+                    return
 
 def del_record(zone,record_name,record_type, record_value, location_ip_master,location_ip_forwarder):
     correct_type = checker.check_record_type(record_type)
@@ -220,10 +192,13 @@ def add_MX_A_record(zone,new_record, new_record_type,new_record_value, ttl,locat
     new_record_type= "A"
     add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
     new_record_type= "MX"
+    print(new_record_type)
+    print("################add_mX_A_RECORD")
     new_record_value=f"{mx_priority} {new_record}.{zone}."
+    print(new_record_value)
     #new_record_value_check=f"{new_record}.{zone}."
     update_func(zone,"@",new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
-    update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
+    #update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
     raise HTTPException(
         status_code=200,
         detail={"message": "record added successfully"} ###TODO check
@@ -296,3 +271,32 @@ def update_record(zone,record_name,record_type,  new_record_value,ttl, location_
     response = dns.query.tcp(update, location_ip_master)
     print(response)
     run_apply(zone,location_ip_master)
+
+
+
+def trigger_reload(zone,location_ip_forwarder):
+    api2_url = f"http://{location_ip_forwarder}:8000/{zone}/reload/"
+    key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
+    cipher_suite = Fernet(key)
+    client_ip = '10.60.60.230'
+    token = cipher_suite.encrypt(client_ip.encode()).decode()
+
+    headers = {"token": token}
+    try:
+        r = requests.get(api2_url, headers=headers, timeout=5)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=404, detail={"error": "Forwarder error after retries"})
+
+def run_apply(zone,location_ip_master):
+    api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
+    key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
+    #key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
+    cipher_suite = Fernet(key)
+    client_ip = '10.60.60.230'
+    token = cipher_suite.encrypt(client_ip.encode()).decode()
+
+    headers = {"token": token}
+    try:
+        r = requests.get(api1_url, headers=headers, timeout=5)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=404, detail={"error": "The master did not update"})
