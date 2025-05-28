@@ -43,6 +43,7 @@ def add_record(record_type:str , detail:RecordDetail ,request:Request, token: An
 
 
 
+
 @app.post("/delete/{record_type}/")
 def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     authenticate_user(request.client.host, token)
@@ -58,6 +59,8 @@ def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Reques
     return {
         "message": "The record deleted"
     }
+
+
 
 
 
