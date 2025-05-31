@@ -143,23 +143,22 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
 
         else:
             print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
-    if new_record_type in ["MX"] :
-        print("###########################")
-        new_record_check= ' '.join(new_record_value.split()[1:]).rstrip('.')
-        print ("new_record_check:",new_record_check)
-        resolver = dns.resolver.Resolver()
-        resolver.nameservers = [location_ip_forwarder]
-        answers = resolver.resolve(zone, "MX")
-        resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
-        print(resolved_values)
-        print('search for: ', new_record_check)
-        if new_record_check.lower() in resolved_values:
-            print("hiiiiiiiiiiiiiiiiiiiiiiii")
-            print(f"Domain MX resolves to the expected IP: {new_record_check}")
-            check_forwarder_N = 10
-
-        else:
-            print(f"Domain MX exists, but IP does not match. Found: {resolved_values}")
+    # if new_record_type in ["MX"] :
+    #     print("###########################")
+    #     new_record_check= ' '.join(new_record_value.split()[1:]).rstrip('.')
+    #     print ("new_record_check:",new_record_check)
+    #     resolver = dns.resolver.Resolver()
+    #     resolver.nameservers = [location_ip_forwarder]
+    #     answers = resolver.resolve(zone, "MX")
+    #     resolved_values = [str(answer.exchange).lower().rstrip('.') for answer in answers]
+    #     print(resolved_values)
+    #     print('search for: ', new_record_check)
+    #     if new_record_check.lower() in resolved_values:
+    #         print(f"Domain MX resolves to the expected IP: {new_record_check}")
+    #         check_forwarder_N = 10
+    #
+    #     else:
+    #         print(f"Domain MX exists, but IP does not match. Found: {resolved_values}")
 
     return None
 
@@ -167,7 +166,6 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
  ###################################################################################
 
 def check_forwarder_del(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    global check_forwarder_N
     if new_record_type in ["A", "AAAA"]:
         fqdn = f"{new_record}.{zone}"
         print("fqdn=", fqdn)
@@ -180,77 +178,82 @@ def check_forwarder_del(zone, new_record, new_record_type, new_record_value, loc
             print(f"DNS query failed: {e} . forwarder does not available")
             response = None
 
-        if response and response.answer:
-            for answer in response.answer:
-                for item in answer.items:
-                    resolved_ips.append(str(item))
-        if not resolved_ips:
-            print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
+        resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+###########################################################################
+        if new_record_type == "A":
+            if new_record_value not in resolved_ips:
+                print(f"Record {fqdn} deleted: {new_record_value}")
+                check_forwarder_N = 10
+                return check_forwarder_N
+            else:
+                print(f"Record {fqdn} is still exist. Found: {resolved_ips}")
+        if new_record_type == "AAAA":
+            try:
+                expected_ip = ipaddress.IPv6Address(new_record_value)
+                normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
 
-            check_forwarder_N = 10
-            raise HTTPException(
-                status_code=200,
-                detail={"message": "Forwarder updated"}
-            )
-        else:
-            print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
+                if expected_ip in normalized_resolved:
+                    print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
+                    check_forwarder_N = 10
+                    return check_forwarder_N
+                else:
+                    print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
 
-            reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
-        main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
-        raise HTTPException(
-                status_code=404,
-                detail={"message": "Forwarder is not responding and the record deleted"}
-            )
-    elif new_record_type == "MX":
-        new_record_check = ' '.join(new_record_value.split()[1:]).rstrip('.')
-
-    query = dns.message.make_query(zone, dns.rdatatype.MX, use_edns=False)
-    response = dns.query.udp(query, location_ip_forwarder, timeout=3)
-
-    resolved_values = []
-    for answer in response.answer:
-        for item in answer.items:
-            resolved_values.append(str(item.exchange).lower().rstrip('.'))
-
-    print("Searching for:", new_record_check)
-    print("Resolved MX records:", resolved_values)
-
-    if new_record_check.lower() in resolved_values:
-        print(f"Domain {zone} has the expected MX record: {new_record_value}")
-        check_forwarder_N = 10
-        raise HTTPException(
-            status_code=200,
-            detail={"message": "Forwarder updated"}
-        )
-    else:
-        print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
-        reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
-    main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
-    raise HTTPException(
-            status_code=404,
-            detail={"message": "Forwarder is not responding and the record deleted"}
-
-        )
+            except Exception as e:
+                print(f"Invalid IPv6 address provided: {e}")
+    return
 
 
-# def reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder):
-#     global check_forwarder_N
-#     command = "reload"
-#     api2_url = f"http://192.168.55.154:8000/{zone}/{command}/"
 
-    # key = b'g2MoSqxslTG5bZUb-ANegIbzRFq5PQnLxTubqD20nt4='
-    # cipher_suite = Fernet(key)
-    # client_ip = '192.168.55.1'
-    # token = cipher_suite.encrypt(client_ip.encode()).decode()
+
+    #     if not resolved_ips:
+    #         print(f"Domain {fqdn} resolves to the expected IP: {new_record_value}")
     #
-    # headers = {"token": token}
+    #         check_forwarder_N = 10
+    #         raise HTTPException(
+    #             status_code=200,
+    #             detail={"message": "Forwarder updated"}
+    #         )
+    #     else:
+    #         print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
     #
-    # try:
-    #     r = requests.get(api2_url, headers=headers, timeout=5)
-    #     print("Reloaded")
-    #     check_forwarder_add(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
-    # except requests.RequestException as e:
-    #     print("Failed to call API:", e)
+    #     trigger_reload(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
+    #     main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
+    #     raise HTTPException(
+    #             status_code=404,
+    #             detail={"message": "Forwarder is not responding and the record deleted"}
+    #         )
+    # elif new_record_type == "MX":
+    #     new_record_check = ' '.join(new_record_value.split()[1:]).rstrip('.')
+    #
+    # query = dns.message.make_query(zone, dns.rdatatype.MX, use_edns=False)
+    # response = dns.query.udp(query, location_ip_forwarder, timeout=3)
+    #
+    # resolved_values = []
+    # for answer in response.answer:
+    #     for item in answer.items:
+    #         resolved_values.append(str(item.exchange).lower().rstrip('.'))
+    #
+    # print("Searching for:", new_record_check)
+    # print("Resolved MX records:", resolved_values)
+    #
+    # if new_record_check.lower() in resolved_values:
+    #     print(f"Domain {zone} has the expected MX record: {new_record_value}")
+    #     check_forwarder_N = 10
+    #     raise HTTPException(
+    #         status_code=200,
+    #         detail={"message": "Forwarder updated"}
+    #     )
+    # else:
+    #     print(f"Domain {zone} exists, but MX record does not match. Found: {resolved_values}")
+    #     reload_zone(zone, new_record, new_record_type, new_record_value,location_ip_master, location_ip_forwarder)
+    # main.delete_record_logic (zone,new_record,new_record_type, new_record_value ,location_ip_master)
+    # raise HTTPException(
+    #         status_code=404,
+    #         detail={"message": "Forwarder is not responding and the record deleted"}
+    #
+    #     )
+
 
 
 def check_the_value(zone,record_name,record_type, record_value,location_ip_master):
