@@ -26,7 +26,7 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
             print(new_record_type)
             raise HTTPException(
                 status_code=409,
-                detail={"error": "This record exist"} ###TODO check
+                detail={"error": "This record exist"}
             )
 
         return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder)
@@ -123,21 +123,13 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
-def update_record_p(zone,record_name,record_type,record_value,second_value,ttl, location_ip_master,location_ip_forwarder):
+def update_record_p(zone,record_name,record_type,record_value,second_value,ttl, location_ip_master,location_ip_forwarder,check_forwarder_N=1):
     correct_type =checker.check_record_type(record_type)
-    if not correct_type:
-        raise HTTPException(
-            status_code=405,
-            detail={"error": "Invalid record type", "type": record_type}
-        )
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     update_record(zone,record_name,record_type,second_value,ttl,location_ip_master,location_ip_forwarder )
-    check_forwarder_N=1
-    while check_forwarder_N <= 10:
-        checker.check_forwarder_add(zone,record_name,record_type, second_value ,location_ip_master,location_ip_forwarder)   ###TODO apply the reload code when the forwarder does not answer
-        check_forwarder_N += 1
-        print(check_forwarder_N)
+    #check_forwarder_N=1
+
 
 def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder):
     update_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder)
@@ -272,12 +264,41 @@ def delete_record(zone,new_record,new_record_type,record_value,location_ip_maste
 
 
 
-def update_record(zone,record_name,record_type,  new_record_value,ttl, location_ip_master, location_ip_forwarder):
+def update_record(zone,record_name,record_type,  new_record_value,ttl, location_ip_master, location_ip_forwarder,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.replace(record_name, ttl, record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
     run_apply(zone,location_ip_master)
+    if record_type in ["A" , "AAAA" , "PTR"]:
+        while check_forwarder_N <= 10:
+           if check_forwarder_N < 9:
+                result = checker.check_forwarder_add(zone, record_name, record_type, new_record_value, location_ip_master, location_ip_forwarder)
+                if result == 10:
+                    check_forwarder_N = 10  # success, go on
+                    continue
+                trigger_reload(zone,location_ip_forwarder)
+                check_forwarder_N += 1
+                print(f"forwarder did not answer, reloading ...{zone}")
+           elif check_forwarder_N == 9:
+                 delete_record_logic (zone,record_name,record_type, new_record_value ,location_ip_master,location_ip_forwarder)
+                 raise HTTPException(
+                      status_code=404,
+                      detail={"message": "Forwarder is not responding and the record deleted"}
+                      )
+           elif check_forwarder_N == 10:
+                if record_type == "A":
+                    print ("check_forwarder_N =" , check_forwarder_N )
+                    # ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+                    # ptr_name = new_record_value.split(".")[-1]
+                    # ptr_value=f"{record_name}.{zone}."
+                    # print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    # update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    return
+                elif record_type == "AAAA" or record_type == "PTR" or record_type == "MX":
+                    print("your record type is",record_type)
+                    return
+
 
 
 

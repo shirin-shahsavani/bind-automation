@@ -78,7 +78,7 @@ def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Reques
     bind_manager.record_manager.update_record_p(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,location_ip_master,location_ip_forwarder)
     raise HTTPException(
             status_code=200,
-            detail={"messege":"The record value has changed successfully"} ###TODO check
+            detail={"messege":"The record value has changed successfully"}
         )
 
 
