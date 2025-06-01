@@ -289,11 +289,11 @@ def update_record(zone,record_name,record_type,  new_record_value,ttl, location_
            elif check_forwarder_N == 10:
                 if record_type == "A":
                     print ("check_forwarder_N =" , check_forwarder_N )
-                    # ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-                    # ptr_name = new_record_value.split(".")[-1]
-                    # ptr_value=f"{record_name}.{zone}."
-                    # print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
-                    # update_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+                    ptr_name = new_record_value.split(".")[-1]
+                    ptr_value=f"{record_name}.{zone}."
+                    print(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
+                    update_record(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder)
                     return
                 elif record_type == "AAAA" or record_type == "PTR" or record_type == "MX":
                     print("your record type is",record_type)
