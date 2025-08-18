@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     locations_ip: dict = {
     "test" : {"master" : "10.60.110.227",
                 "slave" : "10.60.110.228",
-                "forwarder_1": "10.60.110.229",
-                "forwarder_2": ""
+                "forwarder_1": "10.60.110.230",
+                "forwarder_2": "10.60.110.229"
                 },
 
     "pardis" : {"master" : "192.168.55.151",

@@ -6,8 +6,8 @@ from cryptography.fernet import Fernet
 
 
 
-key = b'K5EJ71J77QbPjgu3/C23m1A0jM4YrDxl659dEg8Ros4='
+key = b'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
 cipher_suite = Fernet(key)
-client_ip = '127.0.0.1'
+client_ip = '10.61.128.30'
 token = cipher_suite.encrypt(client_ip.encode()).decode()
 print(token)

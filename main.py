@@ -1,15 +1,13 @@
 ##################Libararies####################
-from typing import Annotated, Union
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from typing import Annotated
+from pydantic import BaseModel , field_validator
 from fastapi import FastAPI , Header ,Request , HTTPException
 from bind_manager import record_manager
-import bind_manager.checker
-import bind_manager.record_manager
 import constants
 import uvicorn
 from utilities import authenticate_user
-import bind_manager
+from fastapi.responses import JSONResponse
+
 
 settings=constants.Settings()
 app = FastAPI()
@@ -23,64 +21,48 @@ class RecordDetail(BaseModel):
     location: str
     second_value : str = None
 
+    @field_validator("location")
+    def validate_location( cls , location: str):
+        if location not in settings.locations_ip:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "این لوکیشن وجود ندارد", "location": location}
+            )
+        return location
+
 
 @app.post("/add/{record_type}/")
 def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     authenticate_user(request.client.host, token)
-    try:
-        location_ip_master=settings.locations_ip[detail.location]["master"]
-        location_ip_forwarder=settings.locations_ip[detail.location]["forwarder_1"]
-    except:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "This location doesn't exist" , "location": detail.location}
-        )
-    Add=record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder)
-
-    return{
-        "message": "The record added"
-    }
-
-
+    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+    record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    return JSONResponse(content={
+        "message": "رکورد با موفقیت ثبت گردید."
+        })
 
 
 @app.post("/delete/{record_type}/")
-def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
+def delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     authenticate_user(request.client.host, token)
-    try:
-        location_ip_master=settings.locations_ip[detail.location]["master"]
-        location_ip_forwarder=settings.locations_ip[detail.location]["forwarder_1"]
-    except:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "This location doesn't exist" , "location": detail.location}
-        )
-    Delete=record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, location_ip_master,location_ip_forwarder)
-    return {
-        "message": "The record deleted"
-    }
-
-
-
-
+    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+    record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, detail.ttl, detail.priority, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    return JSONResponse(content={
+        "message": "رکورد با موفقیت حذف شد."
+    })
 
 @app.post("/update/{record_type}/")
-def check_to_delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
+def update_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     authenticate_user(request.client.host, token)
-    try:
-        location_ip_master=settings.locations_ip[detail.location]["master"]
-        location_ip_forwarder=settings.locations_ip[detail.location]["forwarder_1"]
-    except:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "This location doesn't exist" , "location": detail.location}
-        )
-    bind_manager.record_manager.update_record_p(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,location_ip_master,location_ip_forwarder)
-    raise HTTPException(
-            status_code=200,
-            detail={"messege":"The record value has changed successfully"}
-        )
+    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+    record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    return JSONResponse(content={
+        "message": "مقدار رکورد با موفقیت تغییر کرد."
+    })
 
+
+def get_location_ips(location: str):
+    loc_data = settings.locations_ip.get(location)
+    return loc_data["master"], loc_data["forwarder_1"], loc_data["forwarder_2"]
 
 
 if __name__ == "__main__":
