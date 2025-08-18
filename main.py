@@ -7,6 +7,7 @@ import constants
 import uvicorn
 from utilities import authenticate_user
 from fastapi.responses import JSONResponse
+import time
 
 
 settings=constants.Settings()
@@ -67,3 +68,4 @@ def get_location_ips(location: str):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
