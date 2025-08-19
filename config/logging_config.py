@@ -3,7 +3,7 @@ import sys
 import os
 
 def setup_logging(level=logging.INFO):
-    log_dir = "E:/git/git-vdi-automation/logs"
+    log_dir = "E:/git/bind-api/logs"
     os.makedirs(log_dir, exist_ok=True)  #make the file if it is not exist
     log_file = os.path.join(log_dir, "app.log")
     """Configure application-wide logging."""
