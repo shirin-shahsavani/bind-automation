@@ -11,15 +11,13 @@ import dns.reversename
 import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
+import ipaddress
 
 
 
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
     checker.zone_existance(zone,location_ip_master) ###Check if the zone exists in nameserver
-    # if new_record_type == "PTR":
-    #     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-    # else:
     record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
     if record_exist:
         raise HTTPException(
@@ -28,28 +26,37 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
         )
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
 
-def add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2) :
-    match new_record_type:
-        case "A":
-            add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-        case "PTR":
-            add_PTR_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-        case "AAAA":
-            add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-        case "MX":
-            add_MX_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-        case "TXT":
-            add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-        case "NS":
-            add_NS_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-        case "CNAME":
-            add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2):
+    func_name = f"add_{new_record_type}_record"
+    eval(f"{func_name}(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)")
+
+def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
+    """" Add A record and PTR record """
+    try:
+        ipaddress.IPv4Address(new_record_value)
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": " مقدار وارد شده درست نمیباشد", "value": new_record_value}
+        )
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+    ptr_name = new_record_value.split(".")[-1]
+    ptr_value=f"{new_record}.{zone}."
+    add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+
 
 def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     print(response)
+    if response.rcode() != dns.rcode.NOERROR:
+        error_text = dns.rcode.to_text(response.rcode())
+        raise HTTPException(
+            status_code=403,
+            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+        )
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         update_record_with_forwarder_check(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
@@ -122,12 +129,7 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
-def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-    ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-    ptr_name = new_record_value.split(".")[-1]
-    ptr_value=f"{new_record}.{zone}."
-    add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+
 
 def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
     if int(new_record) >= 255:
@@ -172,7 +174,7 @@ def get_all_ptr_records(zone_name, location_ip_master):
 def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
 
-def add_MX_A_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
+def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
     new_record_type= "A"
     add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     new_record_type= "MX"
