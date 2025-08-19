@@ -27,8 +27,8 @@ class RecordDetail(BaseModel):
 
     @field_validator("location")
     def validate_location( cls , location: str):
-        logger.warning(f"Invalid location provided: {location}")
         if location not in settings.locations_ip:
+            logger.warning(f"Invalid location provided: {location}")
             raise HTTPException(
                 status_code=403,
                 detail={"error": "این لوکیشن وجود ندارد", "location": location}

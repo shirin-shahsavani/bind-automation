@@ -12,7 +12,11 @@ import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
 import ipaddress
+import logging
+from config.logging_config import setup_logging
 
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
@@ -39,11 +43,64 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
             status_code=404,
             detail={"error": " مقدار وارد شده درست نمیباشد", "value": new_record_value}
         )
+    logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
     ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
     ptr_name = new_record_value.split(".")[-1]
     ptr_value=f"{new_record}.{zone}."
+    logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
     add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+
+def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+    logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
+    PTR_LAST_OCTET_LIMIT =254
+    if int(new_record) >= PTR_LAST_OCTET_LIMIT:
+        logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: مقدار رکورد بیشتر از 254 میباشد", "ptr_record": new_record}
+        )
+    ptr_records=get_all_ptr_records(zone, location_ip_master)
+    targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
+    if new_record_value in targets_only:
+        logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "مقدار رکورد قبلا ثبت شده است.", "ptr_record": new_record_value}
+        )
+    logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
+    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
+    logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
+
+def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+    logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+
+def get_all_ptr_records(zone_name, location_ip_master):
+    """
+    Return all PTR records as generator (full_name, target)
+    """
+    try:
+        zone = dns.zone.from_xfr(
+            dns.query.xfr(
+                where=location_ip_master,
+                zone=zone_name,
+                keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}),
+                keyname=dns.name.from_text(constants.key_name),
+                keyalgorithm=constants.key_algorithm
+            )
+        )
+        return (
+            (f"{name}.{zone.origin}", str(rdata.target))
+            for name, node in zone.nodes.items()
+            for rdataset in node.rdatasets
+            if rdataset.rdtype == dns.rdatatype.PTR
+            for rdata in rdataset
+        )
+    except Exception as e:
+        logger.error(f"Zone transfer failed for {zone_name} from {location_ip_master}: {e}")
+        return iter([])  # empty generator
 
 
 def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
@@ -131,45 +188,9 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
 
 
 
-def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
-    if int(new_record) >= 255:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: مقدار رکورد بیشتر از 254 میباشد", "ptr_record": new_record}
-        )
-    ptr_records=get_all_ptr_records(zone, location_ip_master)
-    targets_only = [record[1] for record in ptr_records]
-    if new_record_value in targets_only:
-        raise HTTPException(
-                status_code=404,
-                detail={"error":"درخواست شما با خطا مواجه شد. دلیل: مقدار رکورد وجود دارد"}
-        )
-    else:
-        add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-        return
 
-def get_all_ptr_records(zone_name, location_ip_master):
-    try:
-        zone = dns.zone.from_xfr(
-            dns.query.xfr(
-                where=location_ip_master,
-                zone=zone_name,
-                keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}),
-                keyname=dns.name.from_text(constants.key_name),
-                keyalgorithm=constants.key_algorithm
-            )
-        )
-        ptr_records = []
-        for name, node in zone.nodes.items():
-            for rdataset in node.rdatasets:
-                if rdataset.rdtype == dns.rdatatype.PTR:
-                    for rdata in rdataset:
-                        full_name = f"{name}.{zone.origin}"
-                        ptr_records.append((full_name, str(rdata.target)))
-        return ptr_records
-    except Exception as e:
-        print(f"Zone transfer failed: {e}")
-        return []
+
+
 
 def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
