@@ -72,11 +72,6 @@ def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, locati
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
     logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
 
-def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
-    logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-    logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
-
 def get_all_ptr_records(zone_name, location_ip_master):
     """
     Return all PTR records as generator (full_name, target)
@@ -101,6 +96,16 @@ def get_all_ptr_records(zone_name, location_ip_master):
     except Exception as e:
         logger.error(f"Zone transfer failed for {zone_name} from {location_ip_master}: {e}")
         return iter([])  # empty generator
+
+def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+    logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+
+def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
+    logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 
 def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
@@ -189,12 +194,6 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
 
 
 
-
-
-
-def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-
 def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
     new_record_type= "A"
     add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
@@ -203,9 +202,6 @@ def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,locatio
     add_record_func(zone,"@",new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     return
 
-def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-    return
 
 def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
     new_ns_record = f"{new_record}.{zone}."
