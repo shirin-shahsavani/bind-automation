@@ -7,7 +7,7 @@ import constants
 import uvicorn
 from utilities import authenticate_user
 from fastapi.responses import JSONResponse
-import time
+
 
 
 settings=constants.Settings()

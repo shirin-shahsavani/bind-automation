@@ -17,7 +17,7 @@ It supports adding, deleting, and verifying records in real-time, including inte
 
 ## Architecture
 
-
+```
 +----------------+ +----------------+ +----------------+
 | Master DNS | | Slave DNS | | Forwarder |
 | 10.60.110.227 | <---> | 10.60.110.228 | <--- | 10.60.110.229 |
@@ -29,24 +29,30 @@ It supports adding, deleting, and verifying records in real-time, including inte
 | | DNS Automation API | |
 +-------------| (FastAPI + Python) |---------------+
 +---------------------+
-
+```
 ---
 
 ## Project Structure
 
+## Project Structure
+
+```text
 .
-├── main.py # FastAPI endpoints
-├── checker.py # DNS record verification logic
-├── requirements.txt # Python dependencies
-└── README.md # Project documentation
+├── main.py                 # FastAPI application entrypoint (API endpoints)
+├── bind_manager/
+│   ├── checker.py          # DNS record verification logic (zone/AXFR/forwarder checks)
+│   └── record_manager.py   # DNS record management operations (add, update, delete)
+├── config/
+│   └── logging_config.py   # Logging configuration for the project
+├── requirements.txt        # Python dependencies
+└── README.md               # Project documentation
 
-
+```
 ---
 
 ## Prerequisites
 - **Python** 3.10+
 - **BIND 9** with dynamic update enabled.
-- **MariaDB** for PowerDNS zones (if using PowerDNS integration).
 - TSIG key configured in both BIND and the application.
 
 ---
