@@ -1,3 +1,7 @@
+import asyncio
+import logging
+import httpx
+from cryptography.fernet import Fernet
 from fastapi import HTTPException
 import constants
 import dns.query   #to use axfr
@@ -8,7 +12,9 @@ import dns.rdatatype
 import ipaddress
 from dns.rdtypes.ANY.MX import MX
 import time
+from config.settings import settings
 
+logger = logging.getLogger(__name__)
 
 def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
@@ -32,10 +38,28 @@ def zone_existance(zone, location_ip_master):
 
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
+    print(new_record_type)
     if new_record_type == "PTR":
         return False
 
+    elif new_record_type == "NS":
+        new_ns_record = f"{new_record}.{zone}."
+        keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
+        try:
+            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(constants.key_name),keyalgorithm=constants.key_algorithm))
+        except Exception as e:
+            print(f"AXFR failed: {e}")
+            return False
+        for name, node in zone_data.nodes.items():
+            for rdataset in node.rdatasets:
+                record_type = dns.rdatatype.to_text(rdataset.rdtype)
+                if str(f"{name}.{zone}.") == new_ns_record:
+                    print("NS record already exists")
+                    #record_found = True
+                    return True
+
     else :
+        print("so what")
         """Retrieve zone data via AXFR transfer."""
         keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
         zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=constants.key_name))
@@ -109,7 +133,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 
-def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+async def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
         if new_record_type in ["A" , "AAAA","TXT"]:
             fqdn = f"{new_record}.{zone}"
             query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -124,7 +148,7 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
             if response and response.answer:
                 resolved_ips = [str(item) for answer in response.answer for item in answer.items]
             if new_record_type == "A":
-                time.sleep(2)
+                #await wait_for_forwarder_reload (location_ip_forwarder, zone)
                 if new_record_value in resolved_ips:
                     check_forwarder_N = 10
                     return check_forwarder_N
@@ -249,7 +273,8 @@ def check_forwarder_add(zone, new_record, new_record_type, new_record_value, loc
         return None
 
 
-def check_forwarder_for_updating(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+async def check_forwarder_for_updating(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+    print("checking")
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -258,18 +283,21 @@ def check_forwarder_for_updating(zone, new_record, new_record_type, new_record_v
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
+            print (e)
             response = None
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if new_record_type == "A":
-            time.sleep(2)
+            #await wait_for_forwarder_reload(zone, location_ip_forwarder)
             if new_record_value in resolved_ips:
+
                 check_forwarder_N = 10
                 return check_forwarder_N
             else:
                 print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
         if new_record_type == "AAAA":
+            time.sleep(2)
             try:
                 expected_ip = ipaddress.IPv6Address(new_record_value)
                 normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
@@ -294,7 +322,7 @@ def check_forwarder_for_updating(zone, new_record, new_record_type, new_record_v
                 print(f"TXT record {fqdn} exists, but value does not match. Found: {found_txt_records}")
 
     if new_record_type in ["PTR"]:
-        time.sleep(5)
+        #time.sleep(5)
         PTR_record = f"{new_record}.{zone}"
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD
@@ -557,3 +585,55 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
             status_code=404,
             detail={"error": "درخواست حذف رکورد شما با ارور مواجه شد. دلیل: رکورد با آدرس دیگری ثبت شده است."} ###TODO check
         )
+
+
+
+# async def wait_for_forwarder_reload(forwarder_ip: str, zone: str , timeout: int = 30):
+#     # async def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int = 30):
+#         cipher_suite = Fernet(settings.fernet_key.encode())
+#         token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
+#         headers = {"token": token}
+#
+#         api_reload_url = f"http://{forwarder_ip}:8000/{zone}/reload/"
+#         print(api_reload_url)
+#
+#         async with httpx.AsyncClient() as client:
+#             # Trigger reload
+#             try:
+#                 r = await client.post(api_reload_url, headers=headers, timeout=5)
+#                 r.raise_for_status()
+#             except httpx.RequestError as e:
+#                 logger.error(f"Failed to contact forwarder {forwarder_ip}: {e}")
+#                 raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip}")
+#             except httpx.HTTPStatusError as e:
+#                 logger.error(f"Forwarder reload request failed: {e.response.text}")
+#                 raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+#
+#             job_id = r.json().get("job_id")
+#             if not job_id:
+#                 raise HTTPException(status_code=500, detail="Forwarder did not return a job ID")
+#
+#             logger.info(f"Reload triggered for zone {zone} on forwarder {forwarder_ip}, job_id={job_id}")
+#
+#             # Polling loop to check status
+#             status_url = f"http://{forwarder_ip}:8000/{zone}/reload/status/{job_id}"
+#             start_time = asyncio.get_event_loop().time()
+#
+#             while True:
+#                 if asyncio.get_event_loop().time() - start_time > timeout:
+#                     raise HTTPException(status_code=504, detail="Timeout waiting for forwarder reload")
+#
+#                 try:
+#                     r_status = await client.get(status_url, headers=headers, timeout=5)
+#                     r_status.raise_for_status()
+#                     status = r_status.json().get("status")
+#                 except Exception as e:
+#                     logger.warning(f"Error checking reload status for {forwarder_ip}: {e}")
+#                     await asyncio.sleep(1)
+#                     continue
+#
+#                 if status == "done":
+#                     logger.info(f"Forwarder {forwarder_ip} finished reloading zone {zone}")
+#                     return True
+#
+#                 await asyncio.sleep(1)

@@ -17,12 +17,12 @@ settings=constants.Settings()
 app = FastAPI()
 
 class RecordDetail(BaseModel):
-    zone:str
+    zone:str = "apple.com" ###TODO
     record_name:str
-    record_value:str
+    record_value:str = "192.168.55.10"
     priority:int = 10
     ttl:int = 300
-    location: str
+    location:str = "test"
     second_value : str = None
 
     @field_validator("location")
@@ -37,11 +37,11 @@ class RecordDetail(BaseModel):
 
 
 @app.post("/add/{record_type}/")
-def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
+async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     logger.info(f"Add request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
     authenticate_user(request.client.host, token)
     location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-    record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    await record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"Record added successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
     return JSONResponse(content={
         "message": "رکورد با موفقیت ثبت گردید."
