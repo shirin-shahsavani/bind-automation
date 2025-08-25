@@ -1,6 +1,5 @@
 import asyncio
 import time
-
 import httpx
 from fastapi import HTTPException
 import constants
@@ -54,6 +53,7 @@ async def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,lo
     ptr_value=f"{new_record}.{zone}."
     logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
     await add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
 
 async def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
@@ -101,132 +101,107 @@ def get_all_ptr_records(zone_name, location_ip_master):
         logger.error(f"Zone transfer failed for {zone_name} from {location_ip_master}: {e}")
         return iter([])  # empty generator
 
-def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+async def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    await add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
 
-def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
+async def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    await add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
-def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
-    add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
+async def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
+    print(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
+    await add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    new_record_value=f"{mx_priority} {new_record}."
-    add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
+    new_record_value=f"{mx_priority} {new_record}.{zone}."
+    await add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
-def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+async def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+    await add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    await add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
+async def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
+    logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
+    await add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
+    return
+
 async def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    print("1")
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
-    print("2")
     update.add(new_record, ttl, new_record_type, new_record_value)
-    print("3")
     response = dns.query.tcp(update, location_ip_master)
-    print("4")
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
         raise HTTPException(
             status_code=403,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
-    print("5")
     run_apply(zone,location_ip_master)
-    print(location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        print(location_ip_forwarder_1)
         await update_record_with_forwarder_check(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
-values_for_multiple_records={}
-
+values_for_multiple_records = {}
 async def update_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
 
-    if new_record_type == "A":
-        values_for_multiple_records["A"]=(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N)
-    if new_record_type == "PTR":
-        values_for_multiple_records["PTR"]=(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N)
-    if new_record_type == "MX":
-        values_for_multiple_records["MX"]=(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N)
-    if new_record_type == "NS":
-        values_for_multiple_records["NS"]=(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N)
+    values_for_multiple_records[new_record_type] = (
+        zone,
+        new_record,
+        new_record_type,
+        new_record_value,
+        ttl,
+        location_ip_master,
+        location_ip_forwarder,
+        location_ip_forwarder_1,
+        location_ip_forwarder_2,
+        check_forwarder_N
+    )
+    max_retry= 5
+    while check_forwarder_N <= max_retry:
+       logger.info(f"Forwarder checked for {check_forwarder_N} time(s)")
+       if check_forwarder_N < max_retry-1:
+            result = await  checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
+            if result == max_retry:
+                check_forwarder_N = max_retry
+                continue
+            await wait_for_forwarder_reload(location_ip_forwarder, zone)
+            check_forwarder_N += 1
 
-    if new_record_type in ["A","AAAA" , "PTR" , "MX" , "NS" , "CNAME","TXT"]:
-        while check_forwarder_N <= 10:
-           print(check_forwarder_N)
-           if check_forwarder_N < 9:
-                result = await  checker.check_forwarder_for_updating(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
-                if result == 10:
-                    check_forwarder_N = 10
-                    continue
-                await wait_for_forwarder_reload(location_ip_forwarder, zone)
-                check_forwarder_N += 1
-
-           elif check_forwarder_N == 9:
-                 # if new_record_type == "MX":
-                 #     A_value = values_for_multiple_records['A']
-                 #     ptr_value = values_for_multiple_records['PTR']
-                 #     MX_value = values_for_multiple_records['MX']
-                 #     delete_record_logic(MX_value[0],MX_value[1],MX_value[2], MX_value[3], MX_value[5],MX_value[6] )
-                 #     delete_record_logic(ptr_value[0], ptr_value[1], ptr_value[2], ptr_value[3], ptr_value[5],ptr_value[6])
-                 #     delete_record_logic(A_value[0], A_value[1], A_value[2], A_value[3], A_value[5], A_value[6])
-                 # elif new_record_type == "NS":
-                 #     A_value = values_for_multiple_records['A']
-                 #     NS_value = values_for_multiple_records['NS']
-                 #     ptr_value = values_for_multiple_records['PTR']
-                 #     delete_record_logic(NS_value[0], NS_value[1], NS_value[2], NS_value[3], NS_value[5], NS_value[6])
-                 #     delete_record_logic(ptr_value[0], ptr_value[1], ptr_value[2], ptr_value[3], ptr_value[5],ptr_value[6])
-                 #     delete_record_logic(A_value[0], A_value[1], A_value[2], A_value[3], A_value[5], A_value[6])
-                 # else:
-                 #     delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master,location_ip_forwarder)
-                 raise HTTPException(
-                      status_code=403,
-                      detail={"error": "فرواردر و مستر سینک نیستند و رکورد حذف شد."}
-                      )
-
-           elif check_forwarder_N == 10:
-                if new_record_type == "A":
-                    ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-                    ptr_name = new_record_value.split(".")[-1]
-                    ptr_value=f"{new_record}.{zone}."
-                    update = dns.update.Update(ptr_zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
-                    update.add(ptr_name, ttl, "PTR", ptr_value)
-                    dns.query.tcp(update, location_ip_master)
-                    values_for_multiple_records["PTR"] = (ptr_zone, ptr_name, "PTR", ptr_value, ttl,location_ip_master, location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2,check_forwarder_N)
-                    run_apply(ptr_zone, location_ip_master)
-                    break
-                elif new_record_type in ["AAAA" , "PTR" , "MX" , "NS" , "CNAME","TXT"]:
-                    return None
-        return None
+       elif check_forwarder_N == max_retry-1:
+             record_values = {new_record_type : values_for_multiple_records[new_record_type] for key in ["A", "PTR"]}
+             if new_record_type == "MX":
+                 delete_record_logic(record_values["A"][0], record_values["A"][1], record_values["A"][2],record_values["A"][3], record_values["A"][5],record_values["A"][6])
+                 delete_record_logic(record_values["PTR"][0],record_values["PTR"][1], record_values["PTR"][2], record_values["PTR"][3], record_values["PTR"][5],record_values["PTR"][6])
+                 delete_record_logic(record_values["MX"][0],record_values["MX"][1], record_values["MX"][2], record_values["MX"][3], record_values["MX"][5],record_values["MX"][6])
+             elif new_record_type == "NS":
+                 delete_record_logic(record_values["NS"][0], record_values["NS"][1], record_values["NS"][2], record_values["NS"][3], record_values["NS"][5], record_values["NS"][6])
+                 delete_record_logic(record_values["A"][0], record_values["A"][1], record_values["A"][2], record_values["A"][3], record_values["A"][5], record_values["A"][6])
+                 delete_record_logic(record_values["PTR"][0], record_values["PTR"][1], record_values["PTR"][2], record_values["PTR"][3], record_values["PTR"][5], record_values["PTR"][6])
+             else:
+                 delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master,location_ip_forwarder)
+             raise HTTPException(
+                  status_code=403,
+                  detail={"error": "فرواردر و مستر سینک نیستند و رکورد حذف شد."}
+                  )
+       elif check_forwarder_N == max_retry:
+            return None
     return None
 
 def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_master, location_ip_forwarder) :
-    correct_type = checker.check_record_type(record_type)
-    zone_exists=checker.zone_existance(zone,location_ip_master)
+    checker.check_record_type(record_type)
+    checker.zone_existance(zone,location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
-
-
-def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-    return
-
 def delete_record(zone, new_record, new_record_type, record_value, location_ip_master):
-        keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
         update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
-
         record_value = record_value.strip()
         if record_value.endswith("."):
             record_value = record_value[:-1]
-
         if new_record_type == "MX" :
             # Query existing MX records
             resolver = dns.resolver.Resolver()
@@ -239,13 +214,10 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
                 if record_value in mx:  # Match if value exists
                     match = mx
                     break
-
             if not match:
                 return
-
             update.delete(new_record, "MX", match)
         elif new_record_type == "NS":
-
             resolver = dns.resolver.Resolver()
             resolver.nameservers = [location_ip_master]
             fqdn = f"{new_record}.{zone}".replace("@.", "")
@@ -256,12 +228,9 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
                 if record_value in NS:  # Match if value exists
                     match =NS
                     break
-
             if not match:
                 return
             update.delete(new_record, "NS", match)
-
-
         elif new_record_type == "PTR":
             resolver = dns.resolver.Resolver()
             resolver.nameservers = [location_ip_master]
@@ -276,18 +245,13 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             if not match:
                 return
             update.delete(new_record, "PTR", match)
-            response = dns.query.tcp(update, location_ip_master)
-            #run_apply(zone, location_ip_master)
-
+            dns.query.tcp(update, location_ip_master)
         elif new_record_type == "CNAME":
             fqdn = f"{new_record}.{zone}.".lower()
             update.delete(fqdn, "CNAME")  # Delete entire RRset
         else:
-            update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
             update.delete(new_record, new_record_type)
-            response = dns.query.tcp(update, location_ip_master)
-            #run_apply(zone, location_ip_master)
-
+            dns.query.tcp(update, location_ip_master)
         run_apply(zone, location_ip_master)
 
 
@@ -451,7 +415,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
                 if result == 3:
                     check_forwarder_N = 10  # success, go on
                     continue
-                trigger_reload(zone,location_ip_forwarder)
+                #trigger_reload(zone,location_ip_forwarder)
                 check_forwarder_N += 1
            elif check_forwarder_N == 9:
                  raise HTTPException(
@@ -519,7 +483,6 @@ async def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int =
     headers = {"token": token}
 
     api_reload_url = f"http://{forwarder_ip}:8000/{zone}/reload/"
-    print(api_reload_url)
 
     async with httpx.AsyncClient() as client:
         # Trigger reload
