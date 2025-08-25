@@ -17,12 +17,12 @@ settings=constants.Settings()
 app = FastAPI()
 
 class RecordDetail(BaseModel):
-    zone:str = "apple.com" ###TODO
+    zone:str
     record_name:str
-    record_value:str = "192.168.55.10"
+    record_value:str
     priority:int = 10
     ttl:int = 300
-    location:str = "test"
+    location:str
     second_value : str = None
 
     @field_validator("location")

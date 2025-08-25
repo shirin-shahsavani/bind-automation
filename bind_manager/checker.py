@@ -79,44 +79,22 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
     keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=constants.key_name))
 
-    if new_record_type == "MX":
-        time.sleep(5)
-        dns_server = location_ip_master
-        resolver = dns.resolver.Resolver()
-        resolver.nameservers = [dns_server]
+    if new_record_type in ["MX" , "NS"]:
+        #dns_server = location_ip_master
+        resolver = location_ip_master.Resolver()
+        resolver.nameservers = [location_ip_master]
+        attr_map = {"MX": "exchange", "NS": "target"}
         try:
-            answers = resolver.resolve(zone, "MX")
+            answers = resolver.resolve(zone, new_record_type)
             for rdata in answers:
-                rdata: MX
-                mx_record_in_server = str(rdata.exchange).rstrip('.')
-                if mx_record_in_server.lower() == record_value.lower():
-                    return True
-                else:
-                    print("this value did not found", record_value)
-                    #break
-
-            return False
-        except Exception as e:
-            print(f"Error checking MX: {e}")
-            return False
-    if new_record_type == "NS":
-        time.sleep(2)
-        dns_server = location_ip_master
-        resolver = dns.resolver.Resolver()
-        resolver.nameservers = [dns_server]
-        try:
-            answers = resolver.resolve(zone, "NS")
-            for rdata in answers:
-                ns_record_in_server = str(rdata.target).rstrip('.')
-                new_record_value_clean = record_value.rstrip('.')
-                if ns_record_in_server.lower() == new_record_value_clean.lower():
+                value_in_server = str(getattr(rdata, attr_map[new_record_type])).rstrip('.')
+                if value_in_server.lower() == record_value.rstrip('.').lower():
                     return True
             return False
         except Exception as e:
-            print(f"Error checking NS: {e}")
+            print(f"Error checking {new_record_type}: {e}")
             return False
     else:
-        time.sleep(5)
         records = []
         for name, node in zone_data.nodes.items():
             for rdataset in node.rdatasets:
@@ -133,148 +111,146 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 
-async def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-        if new_record_type in ["A" , "AAAA","TXT"]:
-            fqdn = f"{new_record}.{zone}"
-            query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
-            query.flags |= dns.flags.RD  # Recursion Desired flag
-            resolved_ips = []
-            try:
-                response = dns.query.udp(query, location_ip_forwarder, timeout=3)
-            except Exception as e:
-                print(e)
-                response = None
+# async def check_forwarder_add(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+#         if new_record_type in ["A" , "AAAA","TXT"]:
+#             fqdn = f"{new_record}.{zone}"
+#             query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
+#             query.flags |= dns.flags.RD  # Recursion Desired flag
+#             resolved_ips = []
+#             try:
+#                 response = dns.query.udp(query, location_ip_forwarder, timeout=3)
+#             except Exception as e:
+#                 print(e)
+#                 response = None
+#
+#             if response and response.answer:
+#                 resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+#             if new_record_type == "A":
+#                 #await wait_for_forwarder_reload (location_ip_forwarder, zone)
+#                 if new_record_value in resolved_ips:
+#                     check_forwarder_N = 10
+#                     return check_forwarder_N
+#                 else:
+#                     print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
+#             if new_record_type == "AAAA":
+#                 try:
+#                     expected_ip = ipaddress.IPv6Address(new_record_value)
+#                     normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
+#
+#
+#                     if expected_ip in normalized_resolved:
+#                         check_forwarder_N = 10
+#                         return check_forwarder_N
+#                     else:
+#                         print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
+#
+#                 except Exception as e:
+#                     print(f"Invalid IPv6 address provided: {e}")
+#             if new_record_type == "TXT":
+#                 time.sleep(2)
+#                 expected_txt = new_record_value.strip('"')
+#                 found_txt_records = [item.strip('"') for item in resolved_ips]
+#
+#                 if expected_txt in found_txt_records:
+#                     check_forwarder_N = 10
+#                     return check_forwarder_N
+#                 else:
+#                     print(f"TXT record {fqdn} exists, but value does not match. Found: {found_txt_records}")
+#
+#         if new_record_type in ["PTR"]:
+#             PTR_record=f"{new_record}.{zone}"
+#             query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
+#             query.flags |= dns.flags.RD
+#             resolved_ips = []
+#             try:
+#                response = dns.query.udp(query, location_ip_forwarder, timeout=3)
+#             except Exception as e:
+#                  print(f"DNS query failed: {e} . forwarder does not available")
+#                  response = None
+#
+#             if response and response.answer:
+#                 for answer in response.answer:
+#                     for item in answer.items:
+#                         resolved_ips.append(str(item))
+#             suffix =  f".{zone}."
+#             cleaned = [name.removesuffix(suffix) for name in resolved_ips]
+#             if new_record_value in cleaned:
+#                 check_forwarder_N = 10
+#                 return check_forwarder_N
+#             else:
+#                 print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
+#         if new_record_type in ["MX"] :
+#             time.sleep(10)
+#             dns_server = location_ip_forwarder
+#             resolver = dns.resolver.Resolver()
+#             resolver.nameservers = [dns_server]
+#             mx_value=[]
+#             try:
+#                 answers = resolver.resolve(zone, "MX")
+#                 for rdata in answers:
+#                     rdata: MX
+#                     mx_record_in_server = str(rdata.exchange).rstrip('.')
+#                     new_record_value = new_record_value.split()[1].rstrip('.')
+#                     mx_value.append(new_record_value)
+#                     if mx_record_in_server.lower() == new_record_value.lower():
+#                         check_forwarder_N = 10
+#                         return check_forwarder_N
+#                     else:
+#                         print("we don't have", new_record_value)
+#                         break
+#
+#                 return False
+#             except Exception as e:
+#                 print(f"Error checking MX: {e}")
+#                 return False
+#
+#         if new_record_type == "NS":
+#             time.sleep(10)
+#             dns_server = location_ip_forwarder
+#             resolver = dns.resolver.Resolver()
+#             resolver.nameservers = [dns_server]
+#             try:
+#                 answers = resolver.resolve(zone, "NS")
+#                 ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
+#                 expected_ns = new_record_value.rstrip('.')
+#                 if expected_ns in ns_list:
+#                     check_forwarder_N = 10
+#                     return check_forwarder_N
+#                 else:
+#                     return False
+#             except Exception as e:
+#                 print(f"Error checking NS: {e}")
+#             return False
+#
+#         if new_record_type == "CNAME":
+#             time.sleep(10)
+#             fqdn = f"{new_record}.{zone}".rstrip('.')
+#             try:
+#                 resolver = dns.resolver.Resolver()
+#                 resolver.nameservers = [location_ip_forwarder]
+#                 answers = resolver.resolve(fqdn, "CNAME")
+#                 resolved_target = str(answers[0].target).rstrip('.')
+#             except dns.resolver.NoAnswer:
+#                 resolved_target = None
+#             except dns.resolver.NXDOMAIN:
+#                 resolved_target = None
+#             except Exception as e:
+#                 print(f"Error querying CNAME: {e}")
+#                 resolved_target = None
+#
+#             expected_cname = new_record_value.rstrip('.')
+#
+#             if resolved_target and resolved_target.lower() == expected_cname.lower():
+#                 check_forwarder_N = 10
+#                 return check_forwarder_N
+#             else:
+#                 if resolved_target is None:
+#                     return False
 
-            if response and response.answer:
-                resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-            if new_record_type == "A":
-                #await wait_for_forwarder_reload (location_ip_forwarder, zone)
-                if new_record_value in resolved_ips:
-                    check_forwarder_N = 10
-                    return check_forwarder_N
-                else:
-                    print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-            if new_record_type == "AAAA":
-                try:
-                    expected_ip = ipaddress.IPv6Address(new_record_value)
-                    normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
+#        return None
 
 
-                    if expected_ip in normalized_resolved:
-                        check_forwarder_N = 10
-                        return check_forwarder_N
-                    else:
-                        print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-
-                except Exception as e:
-                    print(f"Invalid IPv6 address provided: {e}")
-            if new_record_type == "TXT":
-                time.sleep(2)
-                expected_txt = new_record_value.strip('"')
-                found_txt_records = [item.strip('"') for item in resolved_ips]
-
-                if expected_txt in found_txt_records:
-                    check_forwarder_N = 10
-                    return check_forwarder_N
-                else:
-                    print(f"TXT record {fqdn} exists, but value does not match. Found: {found_txt_records}")
-
-        if new_record_type in ["PTR"]:
-            time.sleep(5)
-            PTR_record=f"{new_record}.{zone}"
-            query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
-            query.flags |= dns.flags.RD
-            resolved_ips = []
-            try:
-               response = dns.query.udp(query, location_ip_forwarder, timeout=3)
-            except Exception as e:
-                 print(f"DNS query failed: {e} . forwarder does not available")
-                 response = None
-
-            if response and response.answer:
-                for answer in response.answer:
-                    for item in answer.items:
-                        resolved_ips.append(str(item))
-            suffix =  f".{zone}."
-            cleaned = [name.removesuffix(suffix) for name in resolved_ips]
-            if new_record_value in cleaned:
-                check_forwarder_N = 10
-                return check_forwarder_N
-            else:
-                print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
-        if new_record_type in ["MX"] :
-            time.sleep(10)
-            dns_server = location_ip_forwarder
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [dns_server]
-            mx_value=[]
-            try:
-                answers = resolver.resolve(zone, "MX")
-                for rdata in answers:
-                    rdata: MX
-                    mx_record_in_server = str(rdata.exchange).rstrip('.')
-                    new_record_value = new_record_value.split()[1].rstrip('.')
-                    mx_value.append(new_record_value)
-                    if mx_record_in_server.lower() == new_record_value.lower():
-                        check_forwarder_N = 10
-                        return check_forwarder_N
-                    else:
-                        print("we don't have", new_record_value)
-                        break
-
-                return False
-            except Exception as e:
-                print(f"Error checking MX: {e}")
-                return False
-
-        if new_record_type == "NS":
-            time.sleep(10)
-            dns_server = location_ip_forwarder
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [dns_server]
-            try:
-                answers = resolver.resolve(zone, "NS")
-                ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
-                expected_ns = new_record_value.rstrip('.')
-                if expected_ns in ns_list:
-                    check_forwarder_N = 10
-                    return check_forwarder_N
-                else:
-                    return False
-            except Exception as e:
-                print(f"Error checking NS: {e}")
-            return False
-
-        if new_record_type == "CNAME":
-            time.sleep(10)
-            fqdn = f"{new_record}.{zone}".rstrip('.')
-            try:
-                resolver = dns.resolver.Resolver()
-                resolver.nameservers = [location_ip_forwarder]
-                answers = resolver.resolve(fqdn, "CNAME")
-                resolved_target = str(answers[0].target).rstrip('.')
-            except dns.resolver.NoAnswer:
-                resolved_target = None
-            except dns.resolver.NXDOMAIN:
-                resolved_target = None
-            except Exception as e:
-                print(f"Error querying CNAME: {e}")
-                resolved_target = None
-
-            expected_cname = new_record_value.rstrip('.')
-
-            if resolved_target and resolved_target.lower() == expected_cname.lower():
-                check_forwarder_N = 10
-                return check_forwarder_N
-            else:
-                if resolved_target is None:
-                    return False
-
-        return None
-
-
-async def check_forwarder_for_updating(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    print("checking")
+async def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -283,46 +259,31 @@ async def check_forwarder_for_updating(zone, new_record, new_record_type, new_re
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
-            print (e)
+            logger.warning (e)
             response = None
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if new_record_type == "A":
-            #await wait_for_forwarder_reload(zone, location_ip_forwarder)
             if new_record_value in resolved_ips:
-
                 check_forwarder_N = 10
                 return check_forwarder_N
-            else:
-                print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-        if new_record_type == "AAAA":
-            time.sleep(2)
+        elif new_record_type == "AAAA":
             try:
                 expected_ip = ipaddress.IPv6Address(new_record_value)
                 normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
-
                 if expected_ip in normalized_resolved:
                     check_forwarder_N = 10
                     return check_forwarder_N
-                else:
-                    print(f"Domain {fqdn} exists, but IP does not match. Found: {resolved_ips}")
-
             except Exception as e:
-                print(f"Invalid IPv6 address provided: {e}")
-        if new_record_type == "TXT":
-            time.sleep(2)
+                logger.warning(f"Invalid IPv6 address provided: {e}")
+        elif new_record_type == "TXT":
             expected_txt = new_record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
-
             if expected_txt in found_txt_records:
                 check_forwarder_N = 10
                 return check_forwarder_N
-            else:
-                print(f"TXT record {fqdn} exists, but value does not match. Found: {found_txt_records}")
-
-    if new_record_type in ["PTR"]:
-        #time.sleep(5)
+    elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
         query.flags |= dns.flags.RD
@@ -330,9 +291,8 @@ async def check_forwarder_for_updating(zone, new_record, new_record_type, new_re
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
-            print(f"DNS query failed: {e} . forwarder does not available")
+            logger.warning(f"DNS query failed: {e} . forwarder does not available")
             response = None
-
         if response and response.answer:
             for answer in response.answer:
                 for item in answer.items:
@@ -342,36 +302,29 @@ async def check_forwarder_for_updating(zone, new_record, new_record_type, new_re
         if new_record_value in cleaned:
             check_forwarder_N = 10
             return check_forwarder_N
-        else:
-            print(f"Domain {PTR_record} exists, but IP does not match. Found: {cleaned}")
     if new_record_type in ["MX"]:
-        time.sleep(10)
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [dns_server]
         mx_value = []
         try:
             answers = resolver.resolve(zone, "MX")
-            print(answers)
             for rdata in answers:
                 rdata: MX
-                mx_record_in_server = str(rdata.exchange).rstrip('.')
+                mx_record_in_server=str(rdata.exchange).rstrip('.')
                 new_record_value = new_record_value.split()[1].rstrip('.')
                 mx_value.append(new_record_value)
                 if mx_record_in_server.lower() == new_record_value.lower():
-                    # print("Yes, we have", new_record_value)
                     check_forwarder_N = 10
                     return check_forwarder_N
                 else:
                     break
-
             return False
         except Exception as e:
-            print(f"Error checking MX: {e}")
+            logger.warning(f"Error checking MX: {e}")
             return False
 
     if new_record_type == "NS":
-        time.sleep(10)
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [dns_server]
@@ -385,13 +338,11 @@ async def check_forwarder_for_updating(zone, new_record, new_record_type, new_re
             else:
                 return False
         except Exception as e:
-            print(f"Error checking NS: {e}")
+            logger.warning(f"Error checking NS: {e}")
         return False
 
     if new_record_type == "CNAME":
-        time.sleep(10)
         fqdn = f"{new_record}.{zone}."###########.rstrip('.')
-
         try:
             resolver = dns.resolver.Resolver()
             resolver.nameservers = [location_ip_forwarder]
@@ -402,22 +353,17 @@ async def check_forwarder_for_updating(zone, new_record, new_record_type, new_re
         except dns.resolver.NXDOMAIN:
             resolved_target = None
         except Exception as e:
-            print(f"Error querying CNAME: {e}")
+            logger.warning(f"Error querying CNAME: {e}")
             resolved_target = None
-
         expected_cname = new_record_value.rstrip('.')
-
         if resolved_target and resolved_target.lower() == expected_cname.lower():
             check_forwarder_N = 10
             return check_forwarder_N
         else:
             if resolved_target is None:
                 return False
-
     return None
 
-
-###################################################################################
 
 def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
     time.sleep(10)
