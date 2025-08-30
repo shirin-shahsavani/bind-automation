@@ -259,8 +259,6 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
     record_value = record_value.strip()
-    # if record_value.endswith("."):
-    #     record_value = record_value[:-1]
     if new_record_type == "NS":
 
         resolver = dns.resolver.Resolver()
@@ -276,14 +274,13 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         if not match:
             return
         update.delete(new_record, "NS", match)
-        #run_apply(zone, location_ip_master)
-        response = dns.query.tcp(update, location_ip_master)
-        run_apply(zone, location_ip_master)
+        # response = dns.query.tcp(update, location_ip_master)
+        # run_apply(zone, location_ip_master)
     elif new_record_type == "CNAME":
         fqdn = f"{new_record}.{zone}.".lower()
         update.delete(fqdn, "CNAME")  # Delete entire RRset
-        response = dns.query.tcp(update, location_ip_master)
-        time.sleep(5)
+        # response = dns.query.tcp(update, location_ip_master)
+        #time.sleep(5)
         #run_apply(zone, location_ip_master)
     elif new_record_type == "PTR":
         resolver = dns.resolver.Resolver()
@@ -298,7 +295,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
                 break
         if not match:
             return
-        run_apply(zone, location_ip_master)
+        # run_apply(zone, location_ip_master)
     elif new_record_type == "MX":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -316,14 +313,22 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
                 detail={"error": "رکورد MX با این مقدار وجود ندارد",}
             )
         update.delete(new_record, "MX", match)
-        response = dns.query.tcp(update, location_ip_master)
+        # response = dns.query.tcp(update, location_ip_master)
         #run_apply(zone, location_ip_master)
         return
     else:
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=constants.key_algorithm)
         update.delete(new_record, new_record_type)
-        response = dns.query.tcp(update, location_ip_master)
+        # response = dns.query.tcp(update, location_ip_master)
         #run_apply(zone, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master)
+    if response.rcode() != dns.rcode.NOERROR:
+        error_text = dns.rcode.to_text(response.rcode())
+        raise HTTPException(
+            status_code=403,
+            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+        )
+
     run_apply(zone, location_ip_master)
 
 

@@ -93,7 +93,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
                     return True
             return False
         except Exception as e:
-            print(f"Error checking {new_record_type}: {e}")
+            logger.warning(f"Error checking {new_record_type}: {e}")
             return False
     else:
         records = []
