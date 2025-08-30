@@ -254,16 +254,13 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             dns.query.tcp(update, location_ip_master)
         run_apply(zone, location_ip_master)
 
-
-
-def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
+async def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
     record_value = record_value.strip()
     if new_record_type == "NS":
-
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
-        fqdn = f"{new_record}.{zone}".replace("@.", "")
+        #fqdn = f"{new_record}.{zone}".replace("@.", "")
         answers = resolver.resolve( zone, "NS")
         current_NS = [r.to_text() for r in answers]
         match = None
@@ -274,14 +271,9 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         if not match:
             return
         update.delete(new_record, "NS", match)
-        # response = dns.query.tcp(update, location_ip_master)
-        # run_apply(zone, location_ip_master)
     elif new_record_type == "CNAME":
         fqdn = f"{new_record}.{zone}.".lower()
         update.delete(fqdn, "CNAME")  # Delete entire RRset
-        # response = dns.query.tcp(update, location_ip_master)
-        #time.sleep(5)
-        #run_apply(zone, location_ip_master)
     elif new_record_type == "PTR":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -295,7 +287,6 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
                 break
         if not match:
             return
-        # run_apply(zone, location_ip_master)
     elif new_record_type == "MX":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -313,14 +304,8 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
                 detail={"error": "رکورد MX با این مقدار وجود ندارد",}
             )
         update.delete(new_record, "MX", match)
-        # response = dns.query.tcp(update, location_ip_master)
-        #run_apply(zone, location_ip_master)
-        return
     else:
-        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=constants.key_algorithm)
         update.delete(new_record, new_record_type)
-        # response = dns.query.tcp(update, location_ip_master)
-        #run_apply(zone, location_ip_master)
     response = dns.query.tcp(update, location_ip_master)
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
@@ -328,9 +313,8 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
             status_code=403,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
-
-    run_apply(zone, location_ip_master)
-
+    else:
+        run_apply(zone, location_ip_master)
 
 def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
                  # zone, record_name, record_type, second_value, record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2
@@ -399,42 +383,38 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         add_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
 
-
-def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
+async def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     checker.check_record_type(record_type)
     checker.zone_existance(zone,location_ip_master )
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master)
+    await del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
+        await check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
-
-
-def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    #pass
-    if record_type in ["A" , "AAAA" , "PTR","MX", "TXT","NS", "CNAME"]:
-        while check_forwarder_N <= 10:
-           if check_forwarder_N < 3:
-                result = checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
-                if result == 3:
-                    check_forwarder_N = 10  # success, go on
-                    continue
-                #trigger_reload(zone,location_ip_forwarder)
-                check_forwarder_N += 1
-           elif check_forwarder_N == 9:
-                 raise HTTPException(
-                      status_code=403,
-                      detail={"error": "فرواردر ها با مستر سینک نشده اند."}
-                      )
-           elif check_forwarder_N == 10:
-                if record_type == "A":
-                    ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-                    ptr_name = record_value.split(".")[-1]
-                    ptr_value=f"{record_name}.{zone}."
-                    del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master)
-                    return
-                elif record_type == "AAAA" or record_type == "PTR" or record_type == "MX" or record_type == "TXT" or record_type == "NS" or record_type=="CNAME":
-                    return
+async def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+    max_retry=10
+    while check_forwarder_N <= max_retry:
+        if check_forwarder_N < max_retry:
+            result =await checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
+            if result == max_retry:
+                check_forwarder_N = max_retry  # success, go on
+                continue
+            await wait_for_forwarder_reload(location_ip_forwarder, zone)
+            check_forwarder_N += 1
+        elif check_forwarder_N == max_retry-1:
+             raise HTTPException(
+                  status_code=403,
+                  detail={"error": "فرواردر ها با مستر سینک نشده اند."}
+                  )
+        elif check_forwarder_N == max_retry:
+            if record_type == "A":
+                ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+                ptr_name = record_value.split(".")[-1]
+                ptr_value=f"{record_name}.{zone}."
+                await del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master)
+                return
+            else:
+                return
 
 
 
@@ -518,7 +498,7 @@ async def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int =
                 logger.warning(f"Error checking reload status for {forwarder_ip}: {e}")
                 await asyncio.sleep(1)
                 continue
-            print(status)
+            logger.info(f"The status of reloading forwarder is: {status}")
             if status == "done":
                 logger.info(f"Forwarder {forwarder_ip} finished reloading zone {zone}")
                 return True
