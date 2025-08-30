@@ -15,6 +15,7 @@ import time
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
 def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
@@ -38,6 +39,7 @@ def zone_existance(zone, location_ip_master):
 
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
+    global keyring
     print(new_record_type)
     if new_record_type == "PTR":
         return False
@@ -59,10 +61,9 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
                     return True
 
     else :
-        print("so what")
         """Retrieve zone data via AXFR transfer."""
-        keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
-        zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=constants.key_name))
+        #keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
+        zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
         records = []
         for name, node in zone_data.nodes.items():
             for rdataset in node.rdatasets:
@@ -76,7 +77,7 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
 
 def record_existance_check_delete(zone,new_record,new_record_type,record_value, location_ip_master):
     """Retrieve zone data via AXFR transfer."""
-    keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
+
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=constants.key_name))
 
     if new_record_type in ["MX" , "NS"]:

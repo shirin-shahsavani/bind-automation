@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
 
-    key_name:str = "mykey"
-    key_secret:str = "K5EJ71J77QbPjgu3/C23m1A0jM4YrDxl659dEg8Ros4="
+    # key_name:str = "mykey"
+    # key_secret:str = "K5EJ71J77QbPjgu3/C23m1A0jM4YrDxl659dEg8Ros4="
     key_algorithm:str = "hmac-sha256"
     locations_ip: dict = {
     "test" : {"master" : "10.60.110.227",
@@ -36,6 +36,6 @@ class Settings(BaseSettings):
 
 }
 
-key_name = "mykey"
-key_secret = "K5EJ71J77QbPjgu3/C23m1A0jM4YrDxl659dEg8Ros4="
+# key_name = "mykey"
+# key_secret = "K5EJ71J77QbPjgu3/C23m1A0jM4YrDxl659dEg8Ros4="
 key_algorithm = "hmac-sha256"

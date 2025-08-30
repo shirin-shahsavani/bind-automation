@@ -1,8 +1,9 @@
 from cryptography.fernet import Fernet
 from fastapi import HTTPException
+from config.settings import settings
 
 def authenticate_user(real_ip, token):
-    key='gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='
+    key=settings.KEY_AUTH_USER
     cipher_suite=Fernet(key)
     token_ip = cipher_suite.decrypt(token)
     print(token_ip)
@@ -15,13 +16,13 @@ def authenticate_user(real_ip, token):
 from cryptography.fernet import Fernet
 
 def generate_token(ip: str) -> str:
-    key = 'gEBfVhumi1UeTfMpitUEwsQy5ix_Ot_9OIZBGU6p360='  # same key as in authenticate_user
+    key = settings.KEY_AUTH_USER  # same key as in authenticate_user
     cipher_suite = Fernet(key)
     token = cipher_suite.encrypt(ip.encode())
     return token.decode()  # return as string for HTTP
 
 
-print(generate_token("127.0.0.1"))
+#print(generate_token("127.0.0.1"))
 # Output: gAAAAABm... (long token string)
 
 

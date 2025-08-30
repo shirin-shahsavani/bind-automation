@@ -20,7 +20,7 @@ from config.settings import settings
 
 setup_logging()
 logger = logging.getLogger(__name__)
-keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
+keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
 async def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
@@ -85,8 +85,8 @@ def get_all_ptr_records(zone_name, location_ip_master):
             dns.query.xfr(
                 where=location_ip_master,
                 zone=zone_name,
-                keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}),
-                keyname=dns.name.from_text(constants.key_name),
+                keyring=dns.tsigkeyring.from_text({settings.KEY_NAME : settings.KEY_SECRET}),
+                keyname=dns.name.from_text(settings.KEY_NAME),
                 keyalgorithm=constants.key_algorithm
             )
         )
@@ -132,7 +132,7 @@ async def add_CNAME_record(zone,new_record,new_record_type, new_record_value, tt
     return
 
 async def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=constants.key_algorithm)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     if response.rcode() != dns.rcode.NOERROR:
@@ -143,10 +143,10 @@ async def add_record_func(zone,new_record,new_record_type, new_record_value, ttl
         )
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        await update_record_with_forwarder_check(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
+        await add_record_with_forwarder_check(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
 values_for_multiple_records = {}
-async def update_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+async def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
 
     values_for_multiple_records[new_record_type] = (
         zone,
@@ -257,7 +257,6 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
 
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
-    keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
     record_value = record_value.strip()
     # if record_value.endswith("."):
@@ -321,7 +320,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         #run_apply(zone, location_ip_master)
         return
     else:
-        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}),keyalgorithm=constants.key_algorithm)
+        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=constants.key_algorithm)
         update.delete(new_record, new_record_type)
         response = dns.query.tcp(update, location_ip_master)
         #run_apply(zone, location_ip_master)
@@ -330,7 +329,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
 
 def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
                  # zone, record_name, record_type, second_value, record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({constants.key_name: constants.key_secret}), keyalgorithm=constants.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=constants.key_algorithm)
     if record_type == "MX":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
@@ -393,12 +392,12 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         print(response)
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        update_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
+        add_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
 
 
 def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
-    correct_type = checker.check_record_type(record_type)
-    zone_exists=checker.zone_existance(zone,location_ip_master )
+    checker.check_record_type(record_type)
+    checker.zone_existance(zone,location_ip_master )
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
