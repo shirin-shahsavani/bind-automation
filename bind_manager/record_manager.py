@@ -1,7 +1,7 @@
 import asyncio
-import time
 import httpx
 from fastapi import HTTPException
+from starlette.responses import JSONResponse
 import constants
 import dns.query   #to use axfr
 import dns.zone    #Access zone's data
@@ -160,7 +160,7 @@ async def add_record_with_forwarder_check(zone,new_record,new_record_type, new_r
         location_ip_forwarder_2,
         check_forwarder_N
     )
-    max_retry= 5
+    max_retry= 10
     while check_forwarder_N <= max_retry:
        logger.info(f"Forwarder checked for {check_forwarder_N} time(s)")
        if check_forwarder_N < max_retry-1:
@@ -316,33 +316,32 @@ async def del_record_for_deletation(zone, new_record, new_record_type, record_va
     else:
         run_apply(zone, location_ip_master)
 
-def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-                 # zone, record_name, record_type, second_value, record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2
+async def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=constants.key_algorithm)
     if record_type == "MX":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
-        resolved_ips = []
+        #resolved_ips = []
         try:
             response = dns.query.udp(query, location_ip_master, timeout=3)
         except Exception as e:
-            print(e)
+            logger.warning(e)
             response = None
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
             update.delete(record_value,"A")
-            response = dns.query.tcp(update, location_ip_master)
+            dns.query.tcp(update, location_ip_master)
             run_apply(zone, location_ip_master)
             update.add(new_record_value,ttl,"A",resolved_ips[0])
-            response = dns.query.tcp(update, location_ip_master)
+            dns.query.tcp(update, location_ip_master)
             run_apply(zone, location_ip_master)
             #update.replace(record_name, ttl, record_type, new_record_value)
 
-        del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
+        await del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
         mx_priority = "10"
         new_record_value = f"{mx_priority} {new_record_value}"
-        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+        await add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
 
     if record_type == "NS":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
@@ -351,7 +350,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         try:
             response = dns.query.udp(query, location_ip_master, timeout=3)
         except Exception as e:
-            print(e)
+            logger.warning(e)
             response = None
 
         if response and response.answer:
@@ -359,29 +358,23 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
             print(record_name)
             print(resolved_ips)
             print(record_value)
-            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
+            await del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
             update.delete(record_value, "A")
-            response = dns.query.tcp(update, location_ip_master)
-            print(response)
+            dns.query.tcp(update, location_ip_master)
             run_apply(zone, location_ip_master)
-            print (new_record_value)
-            print(resolved_ips[0])
             update.add(new_record_value, ttl, "A", resolved_ips[0])
-            response = dns.query.tcp(update, location_ip_master)
-            print(response)
+            dns.query.tcp(update, location_ip_master)
             run_apply(zone, location_ip_master)
-            add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                            location_ip_forwarder_2)
+            await add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
 
 
-        #add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     else:
+        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=constants.key_algorithm)
         update.replace(record_name, ttl, record_type, new_record_value)
-        response = dns.query.tcp(update, location_ip_master)
-        print(response)
+        dns.query.tcp(update, location_ip_master)
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        add_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
+        await add_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
 
 async def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     checker.check_record_type(record_type)
@@ -416,21 +409,25 @@ async def check_forwarder_after_deletation(zone, record_name, record_type, recor
             else:
                 return
 
-
-
-
-def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,check_forwarder_N=1):
-    correct_type =checker.check_record_type(record_type)
+async def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,check_forwarder_N=1):
+    checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    update_record(zone,record_name,record_type,second_value,record_value,ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    await update_record(zone,record_name,record_type,second_value,record_value,ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
     if record_type == "A":
         ptr_zone = ".".join(second_value.split(".")[:3][::-1]) + ".in-addr.arpa"
         ptr_name = record_value.split(".")[-1]
+        new_ptr_name=second_value.split(".")[-1]
         ptr_value = f"{record_name}.{zone}."
-        delete_record_logic(ptr_zone, ptr_name, "PTR", ptr_value, location_ip_master, location_ip_forwarder_1)
-        #update_record_progress(ptr_zone,ptr_name,record_type,ptr_value,ptr_second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2 ,check_forwarder_N=1)
-
+        try:
+            delete_record_logic(ptr_zone, ptr_name, "PTR", ptr_value, location_ip_master, location_ip_forwarder_1)
+            await add_record(ptr_zone, new_ptr_name, "PTR", ptr_value,ttl, priority, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
+            return None
+        except Exception:
+            return JSONResponse(content={
+                "message": "مقدار رکورد با موفقیت تغییر کرد."
+            })
+    return None
 
 
 def run_apply(zone, location_ip_master):
@@ -445,21 +442,6 @@ def run_apply(zone, location_ip_master):
     except requests.RequestException as e:
         logger.error(f"Master apply failed for zone {zone} - {e}")
         raise HTTPException(status_code=403, detail={"error": "The master did not update"})
-
-
-# def trigger_reload(zone, location_ip_forwarder):
-#     api2_url = f"http://{location_ip_forwarder}:8000/{zone}/reload/"
-#     cipher_suite = Fernet(settings.fernet_key.encode())
-#     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
-#
-#     headers = {"token": token}
-#     try:
-#         r = requests.get(api2_url, headers=headers, timeout=5)
-#         logger.info(f"Reload triggered for zone {zone} on forwarder {location_ip_forwarder}")
-#     except requests.RequestException as e:
-#         logger.error(f"Forwarder reload failed for zone {zone} - {e}")
-#         raise HTTPException(status_code=403, detail={"error": "Forwarder did not reload"})
-
 
 async def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int = 30):
     cipher_suite = Fernet(settings.fernet_key.encode())

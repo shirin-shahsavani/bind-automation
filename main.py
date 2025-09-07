@@ -9,6 +9,7 @@ import uvicorn
 from utilities import authenticate_user
 from fastapi.responses import JSONResponse
 from config.logging_config import setup_logging
+import asyncio
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -35,7 +36,6 @@ class RecordDetail(BaseModel):
             )
         return location
 
-
 @app.post("/add/{record_type}/")
 async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     logger.info(f"Add request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
@@ -46,7 +46,6 @@ async def add_record(record_type:str , detail:RecordDetail ,request:Request, tok
     return JSONResponse(content={
         "message": "رکورد با موفقیت ثبت گردید."
         })
-
 
 @app.post("/delete/{record_type}/")
 async def delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
@@ -60,21 +59,20 @@ async def delete_record(record_type:str , detail:RecordDetail ,request:Request, 
     })
 
 @app.post("/update/{record_type}/")
-def update_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
+async def update_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
     logger.info(f"Update request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
     authenticate_user(request.client.host, token)
     location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-    record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    print(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    await record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"Record updated successfully: {detail.record_name}.{detail.zone} -> {detail.second_value}")
     return JSONResponse(content={
         "message": "مقدار رکورد با موفقیت تغییر کرد."
     })
 
-
 def get_location_ips(location: str):
     loc_data = settings.locations_ip.get(location)
     return loc_data["master"], loc_data["forwarder_1"], loc_data["forwarder_2"]
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
