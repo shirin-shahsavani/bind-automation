@@ -285,7 +285,6 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
                     return check_forwarder_N
                 else:
                     break
-
             return False
         except Exception as e:
             logger.error(f"Error checking MX: {e}")
@@ -346,7 +345,7 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
         record_value = record_value.split()[1].rstrip('.')
 
     try:
-        if record_type in ["A" ,"AAAA" , "TXT","MX","CNAME","PTR"] :
+        if record_type != "NS":
             fqdn = f"{record_name}.{zone}".lower()
             answers = resolver.resolve(fqdn,record_type)
             resolved_ips = [str(answer) for answer in answers]
@@ -365,8 +364,6 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
                     status_code=409,
                     detail={"error":"Ip does not match"}
             )
-        return None
-
     except:
         raise HTTPException(
             status_code=404,
