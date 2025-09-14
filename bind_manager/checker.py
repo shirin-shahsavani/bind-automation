@@ -71,7 +71,6 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
         return False
 
 def record_existance_check_delete(zone,new_record,new_record_type,record_value, location_ip_master):
-    print(zone,new_record,new_record_type,record_value, location_ip_master)
     """Retrieve zone data via AXFR transfer."""
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
 
