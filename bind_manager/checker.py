@@ -216,7 +216,6 @@ async def check_forwarder_for_adding(zone, new_record, new_record_type, new_reco
         else:
             if resolved_target is None:
                 return False
-    return None
 
 async def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
     max_retry=10
