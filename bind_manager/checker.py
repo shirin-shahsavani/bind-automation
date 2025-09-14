@@ -223,7 +223,6 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(record_type))
         query.flags |= dns.flags.RD  # Recursion Desired flag
-        resolved_ips = []
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
@@ -233,7 +232,7 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if record_type == "A":
             if record_value not in resolved_ips:
-                check_forwarder_N = 10
+                check_forwarder_N = max_retry
                 return check_forwarder_N
             else:
                 logger.info(f"Record {fqdn} is still exist. Found: {resolved_ips}")
