@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from fastapi import HTTPException
-import constants
+from config import settings
 import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.tsigkeyring   #authenticate
@@ -44,7 +44,7 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
         new_ns_record = f"{new_record}.{zone}."
         keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
         try:
-            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=constants.key_algorithm))
+            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.key_algorithm))
         except Exception as e:
             print(f"AXFR failed: {e}")
             return False
@@ -285,6 +285,7 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
                     return check_forwarder_N
                 else:
                     break
+
             return False
         except Exception as e:
             logger.error(f"Error checking MX: {e}")

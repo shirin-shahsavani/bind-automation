@@ -2,7 +2,7 @@ import asyncio
 import httpx
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
-import constants
+from config import settings
 import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.update    #add record
@@ -87,7 +87,7 @@ def get_all_ptr_records(zone_name, location_ip_master):
                 zone=zone_name,
                 keyring=dns.tsigkeyring.from_text({settings.KEY_NAME : settings.KEY_SECRET}),
                 keyname=dns.name.from_text(settings.KEY_NAME),
-                keyalgorithm=constants.key_algorithm
+                keyalgorithm=settings.key_algorithm
             )
         )
         return (
@@ -132,7 +132,7 @@ async def add_CNAME_record(zone,new_record,new_record_type, new_record_value, tt
     return
 
 async def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=constants.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.key_algorithm)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     if response.rcode() != dns.rcode.NOERROR:
@@ -198,7 +198,7 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
 def delete_record(zone, new_record, new_record_type, record_value, location_ip_master):
-        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
+        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.key_algorithm)
         record_value = record_value.strip()
         if record_value.endswith("."):
             record_value = record_value[:-1]
@@ -255,7 +255,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
         run_apply(zone, location_ip_master)
 
 async def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
-    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=constants.key_algorithm)
+    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.key_algorithm)
     record_value = record_value.strip()
     if new_record_type == "NS":
         resolver = dns.resolver.Resolver()
@@ -317,7 +317,7 @@ async def del_record_for_deletation(zone, new_record, new_record_type, record_va
         run_apply(zone, location_ip_master)
 
 async def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=constants.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.key_algorithm)
     if record_type == "MX":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
@@ -355,9 +355,6 @@ async def update_record(zone,record_name,record_type,  new_record_value,record_v
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-            print(record_name)
-            print(resolved_ips)
-            print(record_value)
             await del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
             update.delete(record_value, "A")
             dns.query.tcp(update, location_ip_master)
@@ -369,7 +366,7 @@ async def update_record(zone,record_name,record_type,  new_record_value,record_v
 
 
     else:
-        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=constants.key_algorithm)
+        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.key_algorithm)
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
     run_apply(zone,location_ip_master)

@@ -22,9 +22,6 @@ def generate_token(ip: str) -> str:
     return token.decode()  # return as string for HTTP
 
 
-#print(generate_token("127.0.0.1"))
-# Output: gAAAAABm... (long token string)
-
 
 
 
