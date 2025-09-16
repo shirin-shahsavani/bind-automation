@@ -45,7 +45,7 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
         try:
             zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.key_algorithm))
         except Exception as e:
-            print(f"AXFR failed: {e}")
+            logger.error(f"AXFR failed: {e}")
             return False
         for name, node in zone_data.nodes.items():
             for rdataset in node.rdatasets:
