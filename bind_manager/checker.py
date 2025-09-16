@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from fastapi import HTTPException
 from config import settings
@@ -9,7 +8,6 @@ import dns.resolver   #chech zone
 import dns.rdatatype
 import ipaddress
 from dns.rdtypes.ANY.MX import MX
-import time
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
