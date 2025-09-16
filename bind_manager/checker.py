@@ -51,20 +51,18 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
             for rdataset in node.rdatasets:
                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
                 if str(f"{name}.{zone}.") == new_ns_record:
-                    print("NS record already exists")
+                    logger.info (f"NS record already exists")
                     #record_found = True
                     return True
 
     else :
         """Retrieve zone data via AXFR transfer."""
-        #keyring = dns.tsigkeyring.from_text({constants.key_name: constants.key_secret})
         zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
         records = []
         for name, node in zone_data.nodes.items():
             for rdataset in node.rdatasets:
                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
                 records.append(f"{name}.{zone} {record_type}")
-
                 if str(name)==new_record and record_type== new_record_type:
                     return True
         return False
@@ -104,6 +102,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 async def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+    max_retry=10
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -119,14 +118,14 @@ async def check_forwarder_for_adding(zone, new_record, new_record_type, new_reco
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if new_record_type == "A":
             if new_record_value in resolved_ips:
-                check_forwarder_N = 10
+                check_forwarder_N = max_retry
                 return check_forwarder_N
         elif new_record_type == "AAAA":
             try:
                 expected_ip = ipaddress.IPv6Address(new_record_value)
                 normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
                 if expected_ip in normalized_resolved:
-                    check_forwarder_N = 10
+                    check_forwarder_N = max_retry
                     return check_forwarder_N
             except Exception as e:
                 logger.warning(f"Invalid IPv6 address provided: {e}")
@@ -134,7 +133,7 @@ async def check_forwarder_for_adding(zone, new_record, new_record_type, new_reco
             expected_txt = new_record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt in found_txt_records:
-                check_forwarder_N = 10
+                check_forwarder_N = max_retry
                 return check_forwarder_N
     elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
@@ -241,7 +240,7 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
                     check_forwarder_N = max_retry
                     return check_forwarder_N
                 else:
-                    print(f"Record {fqdn} is still exist. Found: {resolved_ips}")
+                    logger.error(f"Record {fqdn} is still exist. Found: {resolved_ips}")
 
             except Exception as e:
                 logger.error(f"Invalid IPv6 address provided: {e}")
@@ -330,12 +329,11 @@ async def check_forwarder_del(zone, new_record, record_type, record_value, locat
         # Compare resolved target with expected CNAME
         expected_cname = record_value.rstrip('.')
         if resolved_target and resolved_target.lower() != expected_cname.lower():
-            check_forwarder_N = 10
+            check_forwarder_N = max_retry
             return check_forwarder_N
         else:
             if resolved_target is None:
                 return False
-    return None
 
 def check_the_value(zone,record_name,record_type, record_value,location_ip_master):
     resolver = dns.resolver.Resolver()
@@ -367,7 +365,7 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
     except:
         raise HTTPException(
             status_code=404,
-            detail={"error": "درخواست حذف رکورد شما با ارور مواجه شد. دلیل: رکورد با آدرس دیگری ثبت شده است."} ###TODO check
+            detail={"error": "درخواست حذف رکورد شما با ارور مواجه شد. دلیل: رکورد با آدرس دیگری ثبت شده است."}
         )
 
 
