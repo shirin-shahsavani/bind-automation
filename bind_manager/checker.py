@@ -13,7 +13,7 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
-max_retry=10
+max_retry=settings.MAX_RETRY
 
 def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:

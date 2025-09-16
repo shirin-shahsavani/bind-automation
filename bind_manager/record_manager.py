@@ -22,7 +22,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
-max_retry= 10
+max_retry= settings.MAX_RETRY
 
 async def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type

@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     KEY_AUTH_USER:str
     KEY_NAME:str
     KEY_SECRET:str
-    key_algorithm: str = "hmac-sha256"
+    KEY_ALGORITHM: str
+
+    MAX_RETRY:int
 
     # test
     TEST_MASTER: str
