@@ -14,6 +14,9 @@ setup_logging()
 logger = logging.getLogger(__name__)
 settings=settings.Settings()
 app = FastAPI()
+logging.getLogger("watchfiles").propagate = False
+logging.getLogger("watchfiles").disabled = True
+
 
 class RecordDetail(BaseModel):
     zone:str

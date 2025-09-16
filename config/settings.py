@@ -7,36 +7,74 @@ class Settings(BaseSettings):
     KEY_NAME:str
     KEY_SECRET:str
     key_algorithm: str = "hmac-sha256"
-    locations_ip: dict = {
-        "test": {"master": "10.60.110.227",
-                 "slave": "10.60.110.228",
-                 "forwarder_1": "10.60.110.229",
-                 "forwarder_2": "10.60.110.229"
-                 },
 
-        "pardis": {"master": "192.168.55.151",
-                   "slave": "10.60.115.60",
-                   "forwarder_1": "192.168.55.154",
-                   "forwarder_2": "172.16.110.210"
-                   },
+    # test
+    TEST_MASTER: str
+    TEST_SLAVE: str
+    TEST_FORWARDER_1: str
+    TEST_FORWARDER_2: str
 
-        "sandbox": {"master": "10.248.37.12",
-                    "slave": "10.248.37.13",
-                    "forwarder_1": "10.248.37.14",
-                    "forwarder_2": "10.248.37.15"
-                    },
-        "khatam": {"master": "10.60.115.59",
-                   "slave": "10.60.115.60",
-                   "forwarder_1": "172.16.110.209",
-                   "forwarder_2": "172.16.110.210"
-                   },
-        "bank": {"master": "10.60.115.59",
-                 "slave": "10.60.115.60",
-                 "forwarder_1": "172.16.110.209",
-                 "forwarder_2": "172.16.110.210"
-                 }
-    }
+    # pardis
+    PARDIS_MASTER: str
+    PARDIS_SLAVE: str
+    PARDIS_FORWARDER_1: str
+    PARDIS_FORWARDER_2: str
+
+    # sandbox
+    SANDBOX_MASTER: str
+    SANDBOX_SLAVE: str
+    SANDBOX_FORWARDER_1: str
+    SANDBOX_FORWARDER_2: str
+
+    # khatam
+    KHATAM_MASTER: str
+    KHATAM_SLAVE: str
+    KHATAM_FORWARDER_1: str
+    KHATAM_FORWARDER_2: str
+
+    # bank
+    BANK_MASTER: str
+    BANK_SLAVE: str
+    BANK_FORWARDER_1: str
+    BANK_FORWARDER_2: str
+
     class Config:
         env_file = ".env"
+
+    @property
+    def locations_ip(self):
+        return {
+            "test": {
+                "master": self.TEST_MASTER,
+                "slave": self.TEST_SLAVE,
+                "forwarder_1": self.TEST_FORWARDER_1,
+                "forwarder_2": self.TEST_FORWARDER_2,
+            },
+            "pardis": {
+                "master": self.PARDIS_MASTER,
+                "slave": self.PARDIS_SLAVE,
+                "forwarder_1": self.PARDIS_FORWARDER_1,
+                "forwarder_2": self.PARDIS_FORWARDER_2,
+            },
+            "sandbox": {
+                "master": self.SANDBOX_MASTER,
+                "slave": self.SANDBOX_SLAVE,
+                "forwarder_1": self.SANDBOX_FORWARDER_1,
+                "forwarder_2": self.SANDBOX_FORWARDER_2,
+            },
+            "khatam": {
+                "master": self.KHATAM_MASTER,
+                "slave": self.KHATAM_SLAVE,
+                "forwarder_1": self.KHATAM_FORWARDER_1,
+                "forwarder_2": self.KHATAM_FORWARDER_2,
+            },
+            "bank": {
+                "master": self.BANK_MASTER,
+                "slave": self.BANK_SLAVE,
+                "forwarder_1": self.BANK_FORWARDER_1,
+                "forwarder_2": self.BANK_FORWARDER_2,
+            },
+        }
+
 
 settings = Settings()
