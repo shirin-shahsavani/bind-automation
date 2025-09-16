@@ -22,6 +22,8 @@ setup_logging()
 logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
+max_retry= 10
+
 async def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
     checker.zone_existance(zone,location_ip_master) ###Check if the zone exists in nameserver
@@ -146,7 +148,7 @@ async def add_record_func(zone,new_record,new_record_type, new_record_value, ttl
 
 values_for_multiple_records = {}
 async def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-
+    global max_retry
     values_for_multiple_records[new_record_type] = (
         zone,
         new_record,
@@ -159,7 +161,7 @@ async def add_record_with_forwarder_check(zone,new_record,new_record_type, new_r
         location_ip_forwarder_2,
         check_forwarder_N
     )
-    max_retry= 10
+    #max_retry= 10
     while check_forwarder_N <= max_retry:
        logger.info(f"Forwarder checked for {check_forwarder_N} time(s)")
        if check_forwarder_N < max_retry-1:
@@ -381,7 +383,7 @@ async def del_record(zone,record_name,record_type, record_value, ttl, priority, 
         await check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
 async def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    max_retry=10
+    global max_retry
     while check_forwarder_N <= max_retry:
         if check_forwarder_N < max_retry:
             result =await checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
