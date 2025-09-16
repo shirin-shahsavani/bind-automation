@@ -36,7 +36,6 @@ def zone_existance(zone, location_ip_master):
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
     global keyring
-    print(new_record_type)
     if new_record_type == "PTR":
         return False
 
