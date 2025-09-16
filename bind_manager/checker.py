@@ -13,6 +13,8 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
+max_retry=10
+
 def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
         raise HTTPException(
@@ -100,7 +102,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 async def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    max_retry=10
+    global max_retry
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -214,7 +216,7 @@ async def check_forwarder_for_adding(zone, new_record, new_record_type, new_reco
                 return False
 
 async def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
-    max_retry=10
+    global max_retry
     if record_type in ["A", "AAAA","TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(record_type))
