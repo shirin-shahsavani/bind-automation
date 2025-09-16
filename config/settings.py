@@ -6,8 +6,6 @@ class Settings(BaseSettings):
     KEY_AUTH_USER:str
     KEY_NAME:str
     KEY_SECRET:str
-
-
     key_algorithm: str = "hmac-sha256"
     locations_ip: dict = {
         "test": {"master": "10.60.110.227",
@@ -40,7 +38,5 @@ class Settings(BaseSettings):
     }
     class Config:
         env_file = ".env"
-
-key_algorithm = "hmac-sha256"
 
 settings = Settings()

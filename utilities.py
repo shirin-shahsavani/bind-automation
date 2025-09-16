@@ -6,14 +6,11 @@ def authenticate_user(real_ip, token):
     key=settings.KEY_AUTH_USER
     cipher_suite=Fernet(key)
     token_ip = cipher_suite.decrypt(token)
-    print(token_ip)
     if token_ip.decode("utf-8") != real_ip:
         raise HTTPException(
             status_code=403,
-            detail={"messege":"Invalid token"} ###TODO check
+            detail={"messege":"Invalid token"}
         )  
-
-from cryptography.fernet import Fernet
 
 def generate_token(ip: str) -> str:
     key = settings.KEY_AUTH_USER  # same key as in authenticate_user
