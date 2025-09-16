@@ -112,7 +112,6 @@ async def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 async def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
-    print(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     await add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     new_record_value=f"{mx_priority} {new_record}.{zone}."
