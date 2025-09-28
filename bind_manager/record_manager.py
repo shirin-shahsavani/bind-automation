@@ -133,7 +133,7 @@ def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,loca
 
 
 def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
     if response.rcode() != dns.rcode.NOERROR:
@@ -328,6 +328,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         except Exception as e:
             logger.warning(e)
             response = None
+
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]

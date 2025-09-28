@@ -101,7 +101,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
                                 "دلیل:عدم وجود رکورد"}
         )
 
-async def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
     global max_retry
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
@@ -215,7 +215,7 @@ async def check_forwarder_for_adding(zone, new_record, new_record_type, new_reco
             if resolved_target is None:
                 return False
 
-async def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
+def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
     global max_retry
     if record_type in ["A", "AAAA","TXT"]:
         fqdn = f"{new_record}.{zone}"
