@@ -6,13 +6,16 @@ from fastapi import FastAPI , Header ,Request , HTTPException
 from bind_manager import record_manager
 from config import settings
 import uvicorn
+from config.settings import Settings
 from utilities import authenticate_user
 from fastapi.responses import JSONResponse
 from config.logging_config import setup_logging
 
+
 setup_logging()
 logger = logging.getLogger(__name__)
 app = FastAPI()
+settings = Settings()
 logging.getLogger("watchfiles").propagate = False
 logging.getLogger("watchfiles").disabled = True
 

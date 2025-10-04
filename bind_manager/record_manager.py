@@ -442,12 +442,14 @@ def run_apply(zone, location_ip_master):
         logger.error(f"Master apply failed for zone {zone} - {e}")
         raise HTTPException(status_code=403, detail={"error": "The master did not update"})
 
-def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int = 30):
+
+def wait_for_forwarder_reload(forwarder_ip: str, zone: str):
     cipher_suite = Fernet(settings.fernet_key.encode())
     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
     headers = {"token": token}
 
     api_reload_url = f"http://{forwarder_ip}:8000/{zone}/reload/"
+    status_url = f"http://{forwarder_ip}:8000/{zone}/reload/status/"
 
     with httpx.Client() as client:
         # Trigger reload
@@ -455,35 +457,40 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str, timeout: int = 30):
             r = client.post(api_reload_url, headers=headers, timeout=5)
             r.raise_for_status()
         except httpx.RequestError as e:
+            logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Failed to contact forwarder {forwarder_ip}: {e}")
             raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip}")
         except httpx.HTTPStatusError as e:
+            logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Forwarder reload request failed: {e.response.text}")
             raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
 
         logger.info(f"Reload triggered for zone {zone} on forwarder {forwarder_ip}")
 
-        # Polling loop to check status
-        status_url = f"http://{forwarder_ip}:8000/{zone}/reload/status/"
-        start_time = time.time()
-
-        while True:
-            if time.time() - start_time > timeout:
-                raise HTTPException(status_code=504, detail="Timeout waiting for forwarder reload")
-
+        # Exponential backoff up to 60 seconds
+        interval = 1
+        while interval <= 60:
             try:
                 r_status = client.get(status_url, headers=headers, timeout=5)
                 r_status.raise_for_status()
                 status = r_status.json().get("status")
             except Exception as e:
                 logger.warning(f"Error checking reload status for {forwarder_ip}: {e}")
-                time.sleep(1)
-                continue
+                status = None
+
             logger.info(f"The status of reloading forwarder is: {status}")
+
             if status == "done":
                 logger.info(f"Forwarder {forwarder_ip} finished reloading zone {zone}")
                 return True
             elif status == "error":
                 raise HTTPException(status_code=500, detail=f"Forwarder failed reloading zone {zone}")
 
-            time.sleep(1)
+            logger.debug(f"Waiting {interval} seconds before next check...")
+            time.sleep(interval)
+
+            # Exponential growth but capped at 60
+            interval = min(interval * 2, 60)
+
+        # If loop ends, that means we reached the 60s cap
+        raise HTTPException(status_code=504, detail="Timeout waiting for forwarder reload")
