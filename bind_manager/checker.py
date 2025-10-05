@@ -11,9 +11,9 @@ from dns.rdtypes.ANY.MX import MX
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
-keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
-max_retry=settings.MAX_RETRY
+
+#max_retry=settings.MAX_RETRY
 
 def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
@@ -35,13 +35,12 @@ def zone_existance(zone, location_ip_master):
         )
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
-    global keyring
+    keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     if new_record_type == "PTR":
         return False
 
     elif new_record_type == "NS":
         new_ns_record = f"{new_record}.{zone}."
-        keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
         try:
             zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.key_algorithm))
         except Exception as e:
@@ -69,6 +68,7 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
 
 def record_existance_check_delete(zone,new_record,new_record_type,record_value, location_ip_master):
     """Retrieve zone data via AXFR transfer."""
+    keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
 
     if new_record_type in ["MX" , "NS"]:
@@ -102,7 +102,6 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    global max_retry
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -118,14 +117,14 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if new_record_type == "A":
             if new_record_value in resolved_ips:
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
         elif new_record_type == "AAAA":
             try:
                 expected_ip = ipaddress.IPv6Address(new_record_value)
                 normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
                 if expected_ip in normalized_resolved:
-                    check_forwarder_N = max_retry
+                    check_forwarder_N = settings.MAX_RETRY
                     return check_forwarder_N
             except Exception as e:
                 logger.warning(f"Invalid IPv6 address provided: {e}")
@@ -133,7 +132,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             expected_txt = new_record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt in found_txt_records:
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
     elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
@@ -216,7 +215,6 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 return False
 
 def check_forwarder_del(zone, new_record, record_type, record_value, location_ip_master, location_ip_forwarder):
-    global max_retry
     if record_type in ["A", "AAAA","TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(record_type))
@@ -230,14 +228,14 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if record_type == "A":
             if record_value not in resolved_ips:
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
             else:
                 logger.info(f"Record {fqdn} is still exist. Found: {resolved_ips}")
         if record_type == "AAAA":
             try:
                 if record_value not in resolved_ips:
-                    check_forwarder_N = max_retry
+                    check_forwarder_N = settings.MAX_RETRY
                     return check_forwarder_N
                 else:
                     logger.error(f"Record {fqdn} is still exist. Found: {resolved_ips}")
@@ -249,7 +247,7 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             expected_txt = record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt not in found_txt_records:
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
 
     if record_type == "PTR":
@@ -264,7 +262,7 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 match = ptr
                 break
         if not match:
-            check_forwarder_N = max_retry
+            check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
     if record_type in ["MX"]:
         dns_server = location_ip_forwarder
@@ -279,7 +277,7 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 new_record_value = record_value    ##.split()[1].rstrip('.')
                 mx_value.append(new_record_value)
                 if mx_record_in_server.lower() != new_record_value.lower():
-                    check_forwarder_N = max_retry
+                    check_forwarder_N = settings.MAX_RETRY
                     return check_forwarder_N
                 else:
                     break
@@ -298,7 +296,7 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
             expected_ns = record_value.rstrip('.')
             if expected_ns not in ns_list:
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
         except Exception as e:
             logger.error(f"Error checking NS: {e}")
@@ -313,23 +311,23 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             # Handle case: the domain exists, but has no CNAME
             if not answers.rrset:
                 resolved_target = None
-                check_forwarder_N = max_retry
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
             # Got a CNAME
             resolved_target = str(answers[0].target).rstrip('.')
         except dns.resolver.NXDOMAIN:
             logger.info(f"{fqdn} does not exist in DNS.")
             resolved_target = None
-            check_forwarder_N = max_retry
+            check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
         except Exception:
             resolved_target = None
-            check_forwarder_N = max_retry
+            check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
         # Compare resolved target with expected CNAME
         expected_cname = record_value.rstrip('.')
         if resolved_target and resolved_target.lower() != expected_cname.lower():
-            check_forwarder_N = max_retry
+            check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
         else:
             if resolved_target is None:

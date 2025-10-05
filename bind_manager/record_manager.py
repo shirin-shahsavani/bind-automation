@@ -22,7 +22,6 @@ setup_logging()
 logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
-max_retry= settings.MAX_RETRY
 
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
@@ -148,7 +147,6 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
 
 values_for_multiple_records = {}
 def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    global max_retry
     values_for_multiple_records[new_record_type] = (
         zone,
         new_record,
@@ -161,18 +159,17 @@ def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_
         location_ip_forwarder_2,
         check_forwarder_N
     )
-    #max_retry= 10
-    while check_forwarder_N <= max_retry:
+    while check_forwarder_N <= settings.MAX_RETRY:
        logger.info(f"Forwarder checked for {check_forwarder_N} time(s)")
-       if check_forwarder_N < max_retry-1:
+       if check_forwarder_N < settings.MAX_RETRY-1:
             result = checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
-            if result == max_retry:
-                check_forwarder_N = max_retry
+            if result == settings.MAX_RETRY:
+                check_forwarder_N = settings.MAX_RETRY
                 continue
             wait_for_forwarder_reload(location_ip_forwarder, zone)
             check_forwarder_N += 1
 
-       elif check_forwarder_N == max_retry-1:
+       elif check_forwarder_N == settings.MAX_RETRY-1:
              record_values = {new_record_type : values_for_multiple_records[new_record_type] for key in ["A", "PTR"]}
              if new_record_type == "MX":
                  delete_record_logic(record_values["A"][0], record_values["A"][1], record_values["A"][2],record_values["A"][3], record_values["A"][5],record_values["A"][6])
@@ -188,7 +185,7 @@ def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_
                   status_code=403,
                   detail={"error": "فرواردر و مستر سینک نیستند و رکورد حذف شد."}
                   )
-       elif check_forwarder_N == max_retry:
+       elif check_forwarder_N == settings.MAX_RETRY:
             return None
 
 
@@ -384,21 +381,21 @@ def del_record(zone,record_name,record_type, record_value, ttl, priority, locati
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    global max_retry
-    while check_forwarder_N <= max_retry:
-        if check_forwarder_N < max_retry:
+
+    while check_forwarder_N <= settings.MAX_RETRY:
+        if check_forwarder_N < settings.MAX_RETRY:
             result =checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
-            if result == max_retry:
-                check_forwarder_N = max_retry  # success, go on
+            if result == settings.MAX_RETRY:
+                check_forwarder_N = settings.MAX_RETRY  # success, go on
                 continue
             wait_for_forwarder_reload(location_ip_forwarder, zone)
             check_forwarder_N += 1
-        elif check_forwarder_N == max_retry-1:
+        elif check_forwarder_N == settings.MAX_RETRY-1:
              raise HTTPException(
                   status_code=403,
                   detail={"error": "فرواردر ها با مستر سینک نشده اند."}
                   )
-        elif check_forwarder_N == max_retry:
+        elif check_forwarder_N == settings.MAX_RETRY:
             if record_type == "A":
                 ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
                 ptr_name = record_value.split(".")[-1]
