@@ -7,6 +7,7 @@ import dns.tsigkeyring   #authenticate
 import dns.resolver   #chech zone
 import dns.rdatatype
 import ipaddress
+import dns.message
 from dns.rdtypes.ANY.MX import MX
 from config.settings import settings
 
@@ -102,6 +103,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
+    print("checking forwarder")
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
@@ -136,7 +138,10 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 return check_forwarder_N
     elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
+        print("dns.message(1)")
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
+        print(query)
+        print("dns.message(2)")
         query.flags |= dns.flags.RD
         resolved_ips = []
         try:
