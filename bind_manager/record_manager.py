@@ -354,7 +354,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         new_record_value = f"{mx_priority} {new_record_value}"
         add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
 
-    if record_type == "NS":
+    elif record_type == "NS":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
         resolved_ips = []
