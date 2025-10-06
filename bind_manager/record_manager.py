@@ -261,11 +261,11 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             update.delete(fqdn, "CNAME")  # Delete entire RRset
         else:
             update.delete(new_record, new_record_type)
-            dns.query.tcp(update, location_ip_master)
+        dns.query.tcp(update, location_ip_master)
         run_apply(zone, location_ip_master)
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
-    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.key_algorithm)
+    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
     record_value = record_value.strip()
     if new_record_type == "NS":
         resolver = dns.resolver.Resolver()
