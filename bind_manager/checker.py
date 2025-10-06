@@ -39,6 +39,7 @@ def zone_existance(zone, location_ip_master):
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
+    print("1")
     if new_record_type == "PTR":
         return False
 
@@ -106,7 +107,6 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         )
 
 def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
-    print("checking forwarder")
     if new_record_type in ["A", "AAAA", "TXT"]:
         fqdn = f"{new_record}.{zone}"
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(new_record_type))
