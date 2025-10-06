@@ -9,6 +9,7 @@ import dns.rdatatype
 import ipaddress
 import dns.message
 import dns.flags
+import dns.name
 from dns.rdtypes.ANY.MX import MX
 from config.settings import settings
 
