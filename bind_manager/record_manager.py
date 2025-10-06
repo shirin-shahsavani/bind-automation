@@ -2,7 +2,7 @@ import time
 import httpx
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
-from config import settings
+#from config import settings
 import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.update    #add record
@@ -100,7 +100,7 @@ def get_all_ptr_records(zone_name, location_ip_master):
                 zone=zone_name,
                 keyring=dns.tsigkeyring.from_text({settings.KEY_NAME : settings.KEY_SECRET}),
                 keyname=dns.name.from_text(settings.KEY_NAME),
-                keyalgorithm=settings.key_algorithm
+                keyalgorithm=settings.KEY_ALGORITHM
             )
         )
         return (
@@ -208,7 +208,7 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
 def delete_record(zone, new_record, new_record_type, record_value, location_ip_master):
-        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.key_algorithm)
+        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
         record_value = record_value.strip()
         if record_value.endswith("."):
             record_value = record_value[:-1]
@@ -327,7 +327,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         run_apply(zone, location_ip_master)
 
 def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.key_algorithm)
+    update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
     if record_type == "MX":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
@@ -377,7 +377,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
 
 
     else:
-        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.key_algorithm)
+        update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
     run_apply(zone,location_ip_master)

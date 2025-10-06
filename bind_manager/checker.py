@@ -39,12 +39,10 @@ def zone_existance(zone, location_ip_master):
 
 def record_existance(zone,new_record,new_record_type,location_ip_master):
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
-    print("1")
     if new_record_type == "PTR":
         return False
 
     elif new_record_type == "NS":
-        print("test1")
         new_ns_record = f"{new_record}.{zone}."
         try:
             zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.KEY_ALGORITHM))
@@ -141,10 +139,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 return check_forwarder_N
     elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
-        print("dns.message(1)")
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
-        print(query)
-        print("dns.message(2)")
         query.flags |= dns.flags.RD
         resolved_ips = []
         try:
