@@ -1,8 +1,6 @@
 import time
 import httpx
 from fastapi import HTTPException
-from starlette.responses import JSONResponse
-#from config import settings
 import dns.query   #to use axfr
 import dns.zone    #Access zone's data
 import dns.update    #add record
