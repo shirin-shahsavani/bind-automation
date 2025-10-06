@@ -38,8 +38,17 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
 
 def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2):
-    func_name = f"add_{new_record_type}_record"
-    eval(f"{func_name}(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)")
+    func_map = {
+        "A": add_A_record,
+        "AAAA": add_AAAA_record,
+        "TXT": add_TXT_record,
+        "MX": add_MX_record,
+        "NS": add_NS_record,
+        "CNAME": add_CNAME_record,
+        "PTR": add_PTR_record
+    }
+
+    func_map.get(new_record_type)
 
 def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     """" Add A record and PTR record """
