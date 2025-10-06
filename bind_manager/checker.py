@@ -8,6 +8,7 @@ import dns.resolver   #chech zone
 import dns.rdatatype
 import ipaddress
 import dns.message
+import dns.flags
 from dns.rdtypes.ANY.MX import MX
 from config.settings import settings
 
@@ -41,9 +42,10 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
         return False
 
     elif new_record_type == "NS":
+        print("test1")
         new_ns_record = f"{new_record}.{zone}."
         try:
-            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.key_algorithm))
+            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.KEY_ALGORITHM))
         except Exception as e:
             logger.error(f"AXFR failed: {e}")
             return False
