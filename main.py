@@ -74,6 +74,12 @@ def update_record(record_type:str , detail:RecordDetail ,request:Request, token:
 
 def get_location_ips(location: str):
     loc_data = settings.locations_ip.get(location)
+    if not loc_data:
+        logger.error(f"Invalid location in get_location_ips: {location}")
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "Invalid location provided", "location": location}
+        )
     return loc_data["master"], loc_data["forwarder_1"], loc_data["forwarder_2"]
 
 if __name__ == "__main__":
