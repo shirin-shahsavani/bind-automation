@@ -1,16 +1,28 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
 from config.settings import settings
 
 def authenticate_user(real_ip, token):
-    key=settings.KEY_AUTH_USER
-    cipher_suite=Fernet(key)
-    token_ip = cipher_suite.decrypt(token)
+    key = settings.KEY_AUTH_USER
+    cipher_suite = Fernet(key)
+    try:
+        token_ip = cipher_suite.decrypt(token)
+    except InvalidToken:
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Token decryption failed or token is invalid"}
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={"message": f"Unexpected error during token validation: {str(e)}"}
+        )
+
     if token_ip.decode("utf-8") != real_ip:
         raise HTTPException(
             status_code=403,
-            detail={"messege":"Invalid token"}
-        )  
+            detail={"message": "Invalid token"}
+        )
 
 def generate_token(ip: str) -> str:
     key = settings.KEY_AUTH_USER  # same key as in authenticate_user
@@ -34,6 +46,3 @@ def generate_token(ip: str) -> str:
 
 
 
-b'gAAAAABn_2hzdFp6OL10LeiNj5AE_xgXmTMtIm3ec9oPnYywTH17I2X4qTl_gujLaqpUa6P3kg0FHHkFQRybYG16ip_jWlHF0g=='
-b'gAAAAABodfFSZeBmeMGDwWER27o2Ogl3uVD7SHD1n-1H95rup9n_5UMFjogefRA-a-IaOQLqmpX_xiTDurey_6qBDu5LqsefBQ=='
-b'gAAAAABn_2r3mWIGEltWlLxueSbImbMEINmy-FKw0OPH8GmHSnxWWoB00aSmfizUYSlmykoimO__ByjCenD3LTbFgP4D25HzRQ=='
