@@ -432,10 +432,10 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
             add_record(ptr_zone, new_ptr_name, "PTR", ptr_value,ttl, priority, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
         except Exception as e:
             logger.warning(e)
-            return JSONResponse(content={
-                "message": "مقدار رکورد با موفقیت تغییر کرد."
-            })
+            return {"status": "warning", "message": "مقدار رکورد با موفقیت تغییر کرد."}
 
+
+    return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
 
 
 def run_apply(zone, location_ip_master):
