@@ -155,10 +155,10 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
         )
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        add_record_with_forwarder_check(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
+        verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
 values_for_multiple_records = {}
-def add_record_with_forwarder_check(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+def verify_forwarder_after_record_add(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
     values_for_multiple_records[new_record_type] = (
         zone,
         new_record,
@@ -382,7 +382,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         dns.query.tcp(update, location_ip_master)
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        add_record_with_forwarder_check(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
+        verify_forwarder_after_record_add(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
 
 def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     checker.check_record_type(record_type)
