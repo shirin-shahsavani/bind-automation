@@ -17,6 +17,9 @@ import ipaddress
 import logging
 from config.logging_config import setup_logging
 from config.settings import settings
+import dns.message
+import dns.flags
+import dns.name
 
 setup_logging()
 logger = logging.getLogger(__name__)
