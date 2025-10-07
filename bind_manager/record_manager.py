@@ -46,7 +46,8 @@ def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,
         "PTR": add_PTR_record
     }
 
-    func_map.get(new_record_type)
+    func = func_map.get(new_record_type)
+    return func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
 
 def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     """" Add A record and PTR record """
