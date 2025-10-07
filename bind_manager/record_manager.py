@@ -18,6 +18,7 @@ from config.settings import settings
 import dns.message
 import dns.flags
 import dns.name
+import dns.rcode
 
 setup_logging()
 logger = logging.getLogger(__name__)
