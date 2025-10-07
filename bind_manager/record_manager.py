@@ -261,6 +261,13 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
         else:
             update.delete(new_record, new_record_type)
         dns.query.tcp(update, location_ip_master)
+        response = dns.query.tcp(update, location_ip_master)
+        if response.rcode() != dns.rcode.NOERROR:
+            error_text = dns.rcode.to_text(response.rcode())
+            raise HTTPException(
+                status_code=403,
+                detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+            )
         run_apply(zone, location_ip_master)
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
