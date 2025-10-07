@@ -158,8 +158,21 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
 values_for_multiple_records = {}
-def verify_forwarder_after_record_add(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
-    values_for_multiple_records[new_record_type] = (
+def verify_forwarder_after_record_add(
+    zone,
+    new_record,
+    new_record_type,
+    new_record_value,
+    ttl,
+    location_ip_master,
+    location_ip_forwarder,
+    location_ip_forwarder_1,
+    location_ip_forwarder_2,
+    check_forwarder_N=1,
+):
+    key_name = f"{new_record_type}-{new_record}"
+
+    values_for_multiple_records[key_name] = (
         zone,
         new_record,
         new_record_type,
@@ -169,36 +182,70 @@ def verify_forwarder_after_record_add(zone,new_record,new_record_type, new_recor
         location_ip_forwarder,
         location_ip_forwarder_1,
         location_ip_forwarder_2,
-        check_forwarder_N
+        check_forwarder_N,
     )
+    print(values_for_multiple_records)
+
     while check_forwarder_N <= settings.MAX_RETRY:
-       logger.info(f"Forwarder checked for {check_forwarder_N} time(s)")
-       if check_forwarder_N < settings.MAX_RETRY-1:
-            result = checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
+        logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY} for {key_name}")
+
+        if check_forwarder_N < settings.MAX_RETRY-1:
+            result = checker.check_forwarder_for_adding(
+                zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder
+            )
+
             if result == settings.MAX_RETRY:
+                logger.info(f" Forwarder {location_ip_forwarder} synced successfully for {key_name}")
                 check_forwarder_N = settings.MAX_RETRY
                 continue
+
             wait_for_forwarder_reload(location_ip_forwarder, zone)
             check_forwarder_N += 1
 
-       elif check_forwarder_N == settings.MAX_RETRY-1:
-             record_values = {new_record_type : values_for_multiple_records[new_record_type] for key in ["A", "PTR"]}
-             if new_record_type == "MX":
-                 delete_record_logic(record_values["A"][0], record_values["A"][1], record_values["A"][2],record_values["A"][3], record_values["A"][5],record_values["A"][6])
-                 delete_record_logic(record_values["PTR"][0],record_values["PTR"][1], record_values["PTR"][2], record_values["PTR"][3], record_values["PTR"][5],record_values["PTR"][6])
-                 delete_record_logic(record_values["MX"][0],record_values["MX"][1], record_values["MX"][2], record_values["MX"][3], record_values["MX"][5],record_values["MX"][6])
-             elif new_record_type == "NS":
-                 delete_record_logic(record_values["NS"][0], record_values["NS"][1], record_values["NS"][2], record_values["NS"][3], record_values["NS"][5], record_values["NS"][6])
-                 delete_record_logic(record_values["A"][0], record_values["A"][1], record_values["A"][2], record_values["A"][3], record_values["A"][5], record_values["A"][6])
-                 delete_record_logic(record_values["PTR"][0], record_values["PTR"][1], record_values["PTR"][2], record_values["PTR"][3], record_values["PTR"][5], record_values["PTR"][6])
-             else:
-                 delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master,location_ip_forwarder)
-             raise HTTPException(
-                  status_code=403,
-                  detail={"error": "فرواردر و مستر سینک نیستند و رکورد حذف شد."}
-                  )
-       elif check_forwarder_N == settings.MAX_RETRY:
+        elif check_forwarder_N == settings.MAX_RETRY - 1:
+            logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
+            record_values = {
+                key: values_for_multiple_records[f"{key}-{new_record}"]
+                for key in ["A", "PTR", "MX", "NS"]
+                if f"{key}-{new_record}" in values_for_multiple_records
+            }
+
+            if new_record_type == "MX":
+                for key in [f"A-{new_record}", f"PTR-{new_record}", f"MX-{new_record}"]:
+                    if key in record_values:
+                        delete_record_logic(
+                            record_values[key][0],
+                            record_values[key][1],
+                            record_values[key][2],
+                            record_values[key][3],
+                            record_values[key][5],
+                            record_values[key][6],
+                        )
+
+            elif new_record_type == "NS":
+                for key in [f"NS-{new_record}", f"A-{new_record}", f"PTR-{new_record}"]:
+                    if key in record_values:
+                        delete_record_logic(
+                            record_values[key][0],
+                            record_values[key][1],
+                            record_values[key][2],
+                            record_values[key][3],
+                            record_values[key][5],
+                            record_values[key][6],
+                        )
+
+            else:
+                delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
+
+            raise HTTPException(
+                status_code=403,
+                detail={"error": f"فرواردر {location_ip_forwarder} با مستر سینک نیست و رکورد حذف شد."},
+            )
+
+        elif check_forwarder_N == settings.MAX_RETRY:
+            logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
             return None
+
 
 
 def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_master, location_ip_forwarder) :
