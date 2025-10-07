@@ -4,7 +4,6 @@ from typing import Annotated
 from pydantic import BaseModel , field_validator
 from fastapi import FastAPI , Header ,Request , HTTPException
 from bind_manager import record_manager
-from config import settings
 import uvicorn
 from config.settings import settings
 from utilities import authenticate_user
