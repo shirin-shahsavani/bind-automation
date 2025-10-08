@@ -184,7 +184,7 @@ def verify_forwarder_after_record_add(
         location_ip_forwarder_2,
         check_forwarder_N,
     )
-    print(values_for_multiple_records)
+
 
     while check_forwarder_N <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY} for {key_name}")
