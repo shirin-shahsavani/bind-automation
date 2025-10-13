@@ -27,7 +27,7 @@ def mock_dns(monkeypatch):
 
 
 def test_add_record_success(mock_checker, mock_dns):
-    """✅ Test that add_record calls add_record_by_type when record does not exist."""
+    """ Test that add_record calls add_record_by_type when record does not exist."""
     mock_checker.record_existance.return_value = False
     mock_add_by_type = MagicMock()
     with patch("bind_manager.record_manager.add_record_by_type", mock_add_by_type):
@@ -49,7 +49,7 @@ def test_add_record_success(mock_checker, mock_dns):
 
 
 def test_add_record_exists(mock_checker):
-    """🚫 Test that add_record raises HTTPException when record already exists."""
+    """ Test that add_record raises HTTPException when record already exists."""
     mock_checker.record_existance.return_value = True
 
     with pytest.raises(HTTPException) as exc_info:
@@ -70,7 +70,7 @@ def test_add_record_exists(mock_checker):
 
 
 def test_add_record_by_type_calls_correct_func(monkeypatch):
-    """⚙️ Ensure add_record_by_type calls correct handler function."""
+    """ Ensure add_record_by_type calls correct handler function."""
     mock_add_A = MagicMock()
     monkeypatch.setattr("bind_manager.record_manager.add_A_record", mock_add_A)
 
@@ -89,7 +89,7 @@ def test_add_record_by_type_calls_correct_func(monkeypatch):
 
 
 def test_add_PTR_record_invalid_octet(monkeypatch):
-    """🚫 Test PTR record fails when octet > 254."""
+    """ Test PTR record fails when octet > 254."""
     mock_get_ptr = MagicMock(return_value=[])
     monkeypatch.setattr("bind_manager.record_manager.get_all_ptr_records", mock_get_ptr)
 

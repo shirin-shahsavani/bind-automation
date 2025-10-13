@@ -9,13 +9,11 @@ from bind_manager import checker
 
 
 def test_check_record_type_valid():
-    """✅ باید برای تایپ درست هیچ خطایی نده"""
     for rtype in ["A", "AAAA", "MX", "CNAME", "TXT", "NS", "PTR"]:
         assert checker.check_record_type(rtype) is None
 
 
 def test_check_record_type_invalid():
-    """❌ تایپ اشتباه باید HTTPException بده"""
     with pytest.raises(HTTPException) as e:
         checker.check_record_type("WRONG")
     assert e.value.status_code == 404
@@ -60,7 +58,6 @@ def test_record_existance_found(mock_key, mock_xfr, mock_zone):
 @patch("bind_manager.checker.dns.query.xfr")
 @patch("bind_manager.checker.dns.tsigkeyring.from_text")
 def test_record_existance_not_found(mock_key, mock_xfr, mock_zone):
-    """❌ وقتی رکورد وجود نداره False بده"""
     fake_zone = MagicMock()
     fake_zone.nodes.items.return_value = []
     mock_zone.return_value = fake_zone
