@@ -28,12 +28,12 @@ keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
     checker.zone_existance(zone,location_ip_master) ###Check if the zone exists in nameserver
-    record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
-    if record_exist:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این رکورد با آدرس دیگری ثبت شده است "}
-        )
+    #record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
+    # if record_exist:
+    #     raise HTTPException(
+    #         status_code=404,
+    #         detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این رکورد با آدرس دیگری ثبت شده است "}
+    #     )
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
 
 def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2):

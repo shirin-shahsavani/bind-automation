@@ -37,37 +37,61 @@ def zone_existance(zone, location_ip_master):
             detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این زون وجود ندارد و یا در دسترس نمیباشد", "zone": zone}
         )
 
-def record_existance(zone,new_record,new_record_type,location_ip_master):
+# def record_existance(zone,new_record,new_record_type,location_ip_master):
+#     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
+#     if new_record_type == "PTR":
+#         return False
+#
+#     elif new_record_type == "NS":
+#         new_ns_record = f"{new_record}.{zone}."
+#         try:
+#             zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.KEY_ALGORITHM))
+#         except Exception as e:
+#             logger.error(f"AXFR failed: {e}")
+#             return False
+#         for name, node in zone_data.nodes.items():
+#             for rdataset in node.rdatasets:
+#                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
+#                 if str(f"{name}.{zone}.") == new_ns_record:
+#                     logger.info (f"NS record already exists")
+#                     #record_found = True
+#                     return True
+#
+#     else :
+#         """Retrieve zone data via AXFR transfer."""
+#         zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
+#         records = []
+#         for name, node in zone_data.nodes.items():
+#             for rdataset in node.rdatasets:
+#                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
+#                 records.append(f"{name}.{zone} {record_type}")
+#                 if str(name)==new_record and record_type== new_record_type:
+#                     return True
+#         return False
+
+
+def record_existance(zone, new_record, new_record_type, location_ip_master):
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
+    fqdn = f"{new_record}.{zone}"
+
     if new_record_type == "PTR":
         return False
 
-    elif new_record_type == "NS":
-        new_ns_record = f"{new_record}.{zone}."
-        try:
-            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.KEY_ALGORITHM))
-        except Exception as e:
-            logger.error(f"AXFR failed: {e}")
-            return False
-        for name, node in zone_data.nodes.items():
-            for rdataset in node.rdatasets:
-                record_type = dns.rdatatype.to_text(rdataset.rdtype)
-                if str(f"{name}.{zone}.") == new_ns_record:
-                    logger.info (f"NS record already exists")
-                    #record_found = True
-                    return True
-
-    else :
-        """Retrieve zone data via AXFR transfer."""
-        zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
-        records = []
-        for name, node in zone_data.nodes.items():
-            for rdataset in node.rdatasets:
-                record_type = dns.rdatatype.to_text(rdataset.rdtype)
-                records.append(f"{name}.{zone} {record_type}")
-                if str(name)==new_record and record_type== new_record_type:
-                    return True
+    try:
+        # 🔹 استفاده از resolver برای پرس‌وجوی یک رکورد خاص (نه کل zone)
+        answer = dns.resolver.resolve(fqdn, new_record_type)
+        logger.info(f"Record {fqdn} {new_record_type} already exists: {answer[0]}")
+        return True
+    except dns.resolver.NXDOMAIN:
         return False
+    except dns.resolver.NoAnswer:
+        return False
+    except Exception as e:
+        logger.error(f"Error checking record existence for {fqdn}: {e}")
+        return False
+
+
+
 
 def record_existance_check_delete(zone,new_record,new_record_type,record_value, location_ip_master):
     """Retrieve zone data via AXFR transfer."""
