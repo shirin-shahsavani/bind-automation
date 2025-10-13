@@ -4,8 +4,6 @@ from unittest.mock import patch, MagicMock
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
-# فایل اصلی که داریم تست می‌کنیم
 from bind_manager import record_manager
 
 
@@ -37,12 +35,12 @@ def test_add_record_success(mock_checker, mock_dns):
             zone="example.com",
             new_record="www",
             new_record_type="A",
-            new_record_value="192.168.1.10",
+            new_record_value="192.168.55.10",
             ttl=300,
             priority=None,
             location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.228",
-            location_ip_forwarder_2="10.60.110.229",
+            location_ip_forwarder_1="10.60.110.229",
+            location_ip_forwarder_2="10.60.110.230",
         )
 
     mock_checker.check_record_type.assert_called_once_with("A")
@@ -63,8 +61,8 @@ def test_add_record_exists(mock_checker):
             ttl=300,
             priority=None,
             location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.228",
-            location_ip_forwarder_2="10.60.110.229",
+            location_ip_forwarder_1="10.60.110.229",
+            location_ip_forwarder_2="10.60.110.230",
         )
 
     assert exc_info.value.status_code == 404
@@ -83,8 +81,8 @@ def test_add_record_by_type_calls_correct_func(monkeypatch):
         new_record_value="192.168.1.10",
         ttl=300,
         location_ip_master="10.60.110.227",
-        location_ip_forwarder_1="10.60.110.228",
-        location_ip_forwarder_2="10.60.110.229",
+        location_ip_forwarder_1="10.60.110.229",
+        location_ip_forwarder_2="10.60.110.230",
     )
 
     mock_add_A.assert_called_once()
@@ -103,8 +101,8 @@ def test_add_PTR_record_invalid_octet(monkeypatch):
             new_record_value="www.example.com.",
             ttl=300,
             location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.228",
-            location_ip_forwarder_2="10.60.110.229",
+            location_ip_forwarder_1="10.60.110.229",
+            location_ip_forwarder_2="10.60.110.230",
         )
 
     assert "مقدار رکورد بیشتر از 254 میباشد" in str(exc_info.value.detail)
@@ -122,7 +120,7 @@ def test_get_all_ptr_records(monkeypatch):
 
 
 def test_get_all_ptr_records_failure(monkeypatch, caplog):
-    """💥 Test that get_all_ptr_records handles exceptions and returns empty iterator."""
+    """Test that get_all_ptr_records handles exceptions and returns empty iterator."""
     monkeypatch.setattr("dns.query.xfr", lambda *a, **k: (_ for _ in ()).throw(Exception("xfr fail")))
     result = record_manager.get_all_ptr_records("zone", "10.60.110.227")
     assert list(result) == []
