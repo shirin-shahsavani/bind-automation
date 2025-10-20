@@ -190,9 +190,7 @@ def verify_forwarder_after_record_add(
         logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY} for {key_name}")
 
         if check_forwarder_N < settings.MAX_RETRY-1:
-            result = checker.check_forwarder_for_adding(
-                zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder
-            )
+            result = checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
 
             if result == settings.MAX_RETRY:
                 logger.info(f" Forwarder {location_ip_forwarder} synced successfully for {key_name}")
@@ -237,10 +235,10 @@ def verify_forwarder_after_record_add(
             else:
                 delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
 
-            raise HTTPException(
-                status_code=403,
-                detail={"error": f"فرواردر {location_ip_forwarder} با مستر سینک نیست و رکورد حذف شد."},
-            )
+                raise HTTPException(
+                    status_code=403,
+                    detail={"error": f"فرواردر {location_ip_forwarder} با مستر سینک نیست و رکورد حذف شد."},
+                )
 
         elif check_forwarder_N == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")

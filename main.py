@@ -42,37 +42,45 @@ class RecordDetail(BaseModel):
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
-    logger.info(f"Add request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
-    authenticate_user(request.client.host, token)
-    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-    record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-    logger.info(f"Record added successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
-    return JSONResponse(content={
-        "message": "رکورد با موفقیت ثبت گردید."
-        })
+    if lock.locked():
+        raise HTTPException(status_code=429, detail="در حال حاضر سرور مشغول پردازش است. لطفاً چند لحظه دیگر تلاش کنید.")
+    async with lock:
+        logger.info(f"Add request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
+        authenticate_user(request.client.host, token)
+        location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+        record_manager.add_record(detail.zone,detail.record_name,record_type.upper(),detail.record_value, detail.ttl, detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+        logger.info(f"Record added successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
+        return JSONResponse(content={
+            "message": "رکورد با موفقیت ثبت گردید."
+            })
 
 @app.post("/delete/{record_type}/")
 async def delete_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
-
-    logger.info(f"Delete request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
-    authenticate_user(request.client.host, token)
-    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-    record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, detail.ttl, detail.priority, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-    logger.info(f"Record deleted successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
-    return JSONResponse(content={
-        "message": "رکورد با موفقیت حذف شد."
-    })
+    if lock.locked():
+        raise HTTPException(status_code=429, detail="در حال حاضر سرور مشغول پردازش است. لطفاً چند لحظه دیگر تلاش کنید.")
+    async with lock:
+        logger.info(f"Delete request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
+        authenticate_user(request.client.host, token)
+        location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+        record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, detail.ttl, detail.priority, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+        logger.info(f"Record deleted successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
+        return JSONResponse(content={
+            "message": "رکورد با موفقیت حذف شد."
+        })
 
 @app.post("/update/{record_type}/")
 async def update_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
-    logger.info(f"Update request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
-    authenticate_user(request.client.host, token)
-    location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-    record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-    logger.info(f"Record updated successfully: {detail.record_name}.{detail.zone} -> {detail.second_value}")
-    return JSONResponse(content={
-        "message": "مقدار رکورد با موفقیت تغییر کرد."
-    })
+    if lock.locked():
+        raise HTTPException(status_code=429, detail="در حال حاضر سرور مشغول پردازش است. لطفاً چند لحظه دیگر تلاش کنید.")
+    async with lock:
+        logger.info(f"Update request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
+        authenticate_user(request.client.host, token)
+        location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
+        record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+        logger.info(f"Record updated successfully: {detail.record_name}.{detail.zone} -> {detail.second_value}")
+        return JSONResponse(content={
+            "message": "مقدار رکورد با موفقیت تغییر کرد."
+        })
 
 def get_location_ips(location: str):
     loc_data = settings.locations_ip.get(location)

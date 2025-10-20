@@ -155,7 +155,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
         suffix = f".{zone}."
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
         if new_record_value in cleaned:
-            check_forwarder_N = 10
+            check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
     if new_record_type in ["MX"]:
         dns_server = location_ip_forwarder
