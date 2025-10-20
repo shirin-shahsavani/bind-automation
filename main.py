@@ -1,4 +1,5 @@
 ##################Libararies####################
+import asyncio
 import logging
 from typing import Annotated
 from pydantic import BaseModel , field_validator
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 logging.getLogger("watchfiles").propagate = False
 logging.getLogger("watchfiles").disabled = True
+
+lock = asyncio.Lock()
 
 
 class RecordDetail(BaseModel):
