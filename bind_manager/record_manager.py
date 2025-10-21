@@ -170,21 +170,28 @@ def verify_forwarder_after_record_add(
     location_ip_forwarder_1,
     location_ip_forwarder_2,
     check_forwarder_N=1,
+    operation_id=None,
 ):
+    if operation_id is None:
+        operation_id = str(uuid.uuid4())
+
     key_name = f"{new_record_type}-{new_record}"
 
-    values_for_multiple_records[key_name] = (
-        zone,
-        new_record,
-        new_record_type,
-        new_record_value,
-        ttl,
-        location_ip_master,
-        location_ip_forwarder,
-        location_ip_forwarder_1,
-        location_ip_forwarder_2,
-        check_forwarder_N,
-    )
+    values_for_multiple_records[key_name] = {
+        "data": (
+            zone,
+            new_record,
+            new_record_type,
+            new_record_value,
+            ttl,
+            location_ip_master,
+            location_ip_forwarder,
+            location_ip_forwarder_1,
+            location_ip_forwarder_2,
+            check_forwarder_N,
+        ),
+        "operation_id": operation_id,
+    }
 
 
     while check_forwarder_N <= settings.MAX_RETRY:
