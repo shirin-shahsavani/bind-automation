@@ -155,7 +155,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
         suffix = f".{zone}."
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
         if new_record_value in cleaned:
-            check_forwarder_N = settings.MAX_RETRY
+            check_forwarder_N = 10 #settings.MAX_RETRY
             return check_forwarder_N
     if new_record_type in ["MX"]:
         dns_server = location_ip_forwarder
@@ -170,7 +170,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 new_record_value = new_record_value.split()[1].rstrip('.')
                 mx_value.append(new_record_value)
                 if mx_record_in_server.lower() == new_record_value.lower():
-                    check_forwarder_N = 10
+                    check_forwarder_N = settings.MAX_RETRY
                     return check_forwarder_N
                 else:
                     break
@@ -188,7 +188,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
             expected_ns = new_record_value.rstrip('.')
             if expected_ns in ns_list:
-                check_forwarder_N = 10
+                check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
             else:
                 return False
