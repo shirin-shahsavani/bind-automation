@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
 
-def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2) :
+def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id) :
     checker.check_record_type(new_record_type)   ###Checking for correct type
     checker.zone_existance(zone,location_ip_master) ###Check if the zone exists in nameserver
     record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
@@ -35,9 +35,9 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
             status_code=404,
             detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این رکورد با آدرس دیگری ثبت شده است "}
         )
-    return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
 
-def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2):
+def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id):
     func_map = {
         "A": add_A_record,
         "AAAA": add_AAAA_record,
@@ -49,9 +49,9 @@ def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,
     }
 
     func = func_map.get(new_record_type)
-    return func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    return func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
 
-def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
+def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     """" Add A record and PTR record """
     try:
         ipaddress.IPv4Address(new_record_value)
@@ -61,15 +61,15 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
             detail={"error": " مقدار وارد شده درست نمیباشد", "value": new_record_value}
         )
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
     ptr_name = new_record_value.split(".")[-1]
     ptr_value=f"{new_record}.{zone}."
     logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
-    add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(ptr_zone,ptr_name,"PTR", ptr_value, ttl, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
 
-def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
     PTR_LAST_OCTET_LIMIT =254
     if int(new_record) >= PTR_LAST_OCTET_LIMIT:
@@ -87,7 +87,7 @@ def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, locati
             detail={"error": "مقدار رکورد قبلا ثبت شده است.", "ptr_record": new_record_value}
         )
     logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
-    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
+    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
     logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
 
 def get_all_ptr_records(zone_name, location_ip_master):
@@ -115,36 +115,36 @@ def get_all_ptr_records(zone_name, location_ip_master):
         logger.error(f"Zone transfer failed for {zone_name} from {location_ip_master}: {e}")
         return iter([])  # empty generator
 
-def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
+def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
 
-def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
+def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
-def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 , mx_priority=10):
-    add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
+def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 ,operation_id, mx_priority=10):
+    add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     new_record_value=f"{mx_priority} {new_record}.{zone}."
-    add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
-def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2):
-    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
+    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
-def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2):
+def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
 
 
-def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
     response = dns.query.tcp(update, location_ip_master)
@@ -156,7 +156,7 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
         )
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
+        verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
 
 values_for_multiple_records = {}
 def verify_forwarder_after_record_add(
@@ -169,11 +169,12 @@ def verify_forwarder_after_record_add(
     location_ip_forwarder,
     location_ip_forwarder_1,
     location_ip_forwarder_2,
+    operation_id,
     check_forwarder_N=1,
-    operation_id=None,
+
 ):
-    if operation_id is None:
-        operation_id = str(uuid.uuid4())
+    # if operation_id is None:
+    #     operation_id = str(uuid.uuid4())
 
     key_name = f"{new_record_type}-{new_record}"
 
@@ -476,7 +477,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         dns.query.tcp(update, location_ip_master)
     run_apply(zone,location_ip_master)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        verify_forwarder_after_record_add(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 )
+        verify_forwarder_after_record_add(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 ,operation_id)
 
 def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
     checker.check_record_type(record_type)
