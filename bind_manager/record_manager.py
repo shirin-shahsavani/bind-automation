@@ -19,6 +19,7 @@ import dns.message
 import dns.flags
 import dns.name
 import dns.rcode
+import uuid
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -207,6 +208,18 @@ def verify_forwarder_after_record_add(
                 for key in ["A", "PTR", "MX", "NS"]
                 if f"{key}-{new_record}" in values_for_multiple_records
             }
+            print(new_record_type)#############################
+            if new_record_type == "A":
+                for key in [f"A-{new_record}", f"PTR-{new_record}"]:
+                    if key in record_values:
+                        delete_record_logic(
+                            record_values[key][0],
+                            record_values[key][1],
+                            record_values[key][2],
+                            record_values[key][3],
+                            record_values[key][5],
+                            record_values[key][6],
+                        )
 
             if new_record_type == "MX":
                 for key in [f"A-{new_record}", f"PTR-{new_record}", f"MX-{new_record}"]:
