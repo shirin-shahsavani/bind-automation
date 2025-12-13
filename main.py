@@ -44,6 +44,7 @@ class RecordDetail(BaseModel):
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
+    print(lock.locked(),detail.record_name)
     if lock.locked():
         raise HTTPException(status_code=429, detail="در حال حاضر سرور مشغول پردازش است. لطفاً چند لحظه دیگر تلاش کنید.")
     async with lock:
