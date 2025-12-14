@@ -38,14 +38,14 @@ class RecordDetail(BaseModel):
         if location not in settings.locations_ip:
             logger.warning(f"Invalid location provided: {location}")
             raise HTTPException(
-                status_code=403,
+                status_code=404, #NOT_FOUND
                 detail={ "error": "This location does not exist", "location": location}
             )
         return location
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
-    print(lock.locked(),detail.record_name)
+    #print(lock.locked(),detail.record_name)
     if lock.locked():
         raise HTTPException(status_code=429, detail="The server is busy. Please try again later.")
     async with lock:
@@ -72,6 +72,7 @@ async def delete_record(record_type:str , detail:RecordDetail ,request:Request, 
         return JSONResponse(content={
             "message": "The record was successfully deleted."
         })
+    
 
 @app.post("/update/{record_type}/")
 async def update_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):

@@ -32,8 +32,8 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
     record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
     if record_exist:
         raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این رکورد با آدرس دیگری ثبت شده است "}
+            status_code=409, #conflict
+            detail={"error": "This record already exists with another address and cannot be added again. "}
         )
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
 
