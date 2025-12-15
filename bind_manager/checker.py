@@ -33,7 +33,7 @@ def zone_existance(zone, location_ip_master):
         return True
     except Exception as e:
         raise HTTPException(
-            status_code=404,
+            status_code=404, #NOT_FOUND
             detail={"error": "The zone does not exist or is not accessible.", "zone": zone}
         )
 

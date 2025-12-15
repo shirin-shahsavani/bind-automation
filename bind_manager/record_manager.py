@@ -57,8 +57,8 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
         ipaddress.IPv4Address(new_record_value)
     except ValueError:
         raise HTTPException(
-            status_code=404,
-            detail={"error": " مقدار وارد شده درست نمیباشد", "value": new_record_value}
+            status_code=400, #BAD_REQUEST
+            detail={"error": "The provided value is not a valid IPv4 address.", "value": new_record_value}
         )
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
@@ -206,7 +206,7 @@ def verify_forwarder_after_record_add(
                 check_forwarder_N = settings.MAX_RETRY
                 continue
 
-            wait_for_forwarder_reload(location_ip_forwarder, zone)
+            wait_for_forwarder_reload(location_ip_forwarder, zone,operation_id)
             check_forwarder_N += 1
 
         # elif check_forwarder_N == settings.MAX_RETRY - 1:
@@ -279,8 +279,8 @@ def verify_forwarder_after_record_add(
                     del values_for_multiple_records[stored_key]
 
             raise HTTPException(
-                status_code=403,
-                detail={"error": f"فورواردِ {location_ip_forwarder} با مستر سینک نیست و رکوردهای عملیات حذف شدند."},
+                status_code=502,
+                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
             )
 
         elif check_forwarder_N == settings.MAX_RETRY:
@@ -534,20 +534,21 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
 
 
 def run_apply(zone, location_ip_master):
+    """apply freeze and thaw command on master server."""
     api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
     cipher_suite = Fernet(settings.fernet_key.encode())
     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
 
     headers = {"token": token}
     try:
-        r = requests.get(api1_url, headers=headers, timeout=5)
+        requests.get(api1_url, headers=headers, timeout=5)
         logger.info(f"Running apply command for zone {zone} on master {location_ip_master}")
     except requests.RequestException as e:
         logger.error(f"Master apply failed for zone {zone} - {e}")
-        raise HTTPException(status_code=403, detail={"error": "The master did not update"})
+        raise HTTPException(status_code=502, detail={"error": "Failed to apply changes on the master server."})
 
 
-def wait_for_forwarder_reload(forwarder_ip: str, zone: str):
+def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):
     cipher_suite = Fernet(settings.fernet_key.encode())
     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
     headers = {"token": token}
@@ -563,7 +564,21 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str):
         except httpx.RequestError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Failed to contact forwarder {forwarder_ip}: {e}")
-            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip}")
+            for stored_key, info in list(values_for_multiple_records.items()):
+                if info["operation_id"] == operation_id:
+                    data = info["data"]
+                    delete_record_logic(
+                        data[0],  # zone
+                        data[1],  # new_record
+                        data[2],  # new_record_type
+                        data[3],  # new_record_value
+                        data[5],  # location_ip_master
+                        data[6],  # location_ip_forwarder
+                    )
+
+                    del values_for_multiple_records[stored_key]
+                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id}), Record deleted")
+            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} , The record didn't add.")
         except httpx.HTTPStatusError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Forwarder reload request failed: {e.response.text}")
