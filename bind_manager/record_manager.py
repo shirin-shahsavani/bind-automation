@@ -71,24 +71,32 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
 
 def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
-    PTR_LAST_OCTET_LIMIT =254
-    if int(new_record) >= PTR_LAST_OCTET_LIMIT:
-        logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
+    try:
+        PTR_LAST_OCTET_LIMIT =254
+        if int(new_record) >= PTR_LAST_OCTET_LIMIT:
+            logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
+            raise HTTPException(
+                status_code=400,  #Bad request
+                detail={"error": "Invalid PTR record value. Last octet must be less than 254.", "ptr_record": new_record}
+            )
+        ptr_records=get_all_ptr_records(zone, location_ip_master)
+        targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
+        if new_record_value in targets_only:
+            logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "The record value already exists.", "ptr_record": new_record_value}
+            )
+        logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
+        add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
+        logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
+
+    except ValueError:
         raise HTTPException(
-            status_code=400,  #Bad request
-            detail={"error": "Invalid PTR record value. Last octet must be less than 254.", "ptr_record": new_record}
+            status_code=400,  # BAD_REQUEST
+            detail={"error": "The value is not proper for PTR record"}
         )
-    ptr_records=get_all_ptr_records(zone, location_ip_master)
-    targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
-    if new_record_value in targets_only:
-        logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "The record value already exists.", "ptr_record": new_record_value}
-        )
-    logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
-    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
-    logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
+
 
 def get_all_ptr_records(zone_name, location_ip_master):
     """
