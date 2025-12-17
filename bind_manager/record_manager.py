@@ -83,8 +83,8 @@ def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, locati
     if new_record_value in targets_only:
         logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
         raise HTTPException(
-            status_code=404,
-            detail={"error": "مقدار رکورد قبلا ثبت شده است.", "ptr_record": new_record_value}
+            status_code=409,
+            detail={"error": "The record value already exists.", "ptr_record": new_record_value}
         )
     logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
@@ -160,19 +160,19 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
 
 values_for_multiple_records = {}
 def verify_forwarder_after_record_add(
-    zone,
-    new_record,
-    new_record_type,
-    new_record_value,
-    ttl,
-    location_ip_master,
-    location_ip_forwarder,
-    location_ip_forwarder_1,
-    location_ip_forwarder_2,
-    operation_id,
-    check_forwarder_N=1,
+        zone,
+        new_record,
+        new_record_type,
+        new_record_value,
+        ttl,
+        location_ip_master,
+        location_ip_forwarder,
+        location_ip_forwarder_1,
+        location_ip_forwarder_2,
+        operation_id,
+        check_forwarder_N=1,
 
-):
+) :
     # if operation_id is None:
     #     operation_id = str(uuid.uuid4())
 
@@ -275,8 +275,8 @@ def verify_forwarder_after_record_add(
                         data[5],  # location_ip_master
                         data[6],  # location_ip_forwarder
                     )
-                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id})")
                     del values_for_multiple_records[stored_key]
+                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id})")
 
             raise HTTPException(
                 status_code=502,
@@ -296,68 +296,71 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
 def delete_record(zone, new_record, new_record_type, record_value, location_ip_master):
-        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
-        record_value = record_value.strip()
-        if record_value.endswith("."):
-            record_value = record_value[:-1]
-        if new_record_type == "MX" :
-            # Query existing MX records
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}".replace("@.", "")
-            answers = resolver.resolve(fqdn, "MX")
-            current_mx = [r.to_text() for r in answers]  # Example: "10 mail-23.shirin.local."
-            match = None
-            for mx in current_mx:
-                if record_value in mx:  # Match if value exists
-                    match = mx
-                    break
-            if not match:
-                return
-            update.delete(new_record, "MX", match)
-        elif new_record_type == "NS":
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}".replace("@.", "")
-            answers = resolver.resolve(fqdn, "NS")
-            current_NS = [r.to_text() for r in answers]
-            match = None
-            for NS in current_NS:
-                if record_value in NS:  # Match if value exists
-                    match =NS
-                    break
-            if not match:
-                return
-            update.delete(new_record, "NS", match)
-        elif new_record_type == "PTR":
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}"
-            answers = resolver.resolve(fqdn, "PTR")
-            current_ptr = [r.to_text() for r in answers]
-            match = None
-            for ptr in current_ptr:
-                if record_value.rstrip(".") == ptr.rstrip("."):
-                    match = ptr
-                    break
-            if not match:
-                return
-            update.delete(new_record, "PTR", match)
-            #dns.query.tcp(update, location_ip_master)
-        elif new_record_type == "CNAME":
-            fqdn = f"{new_record}.{zone}.".lower()
-            update.delete(fqdn, "CNAME")  # Delete entire RRset
-        else:
-            update.delete(new_record, new_record_type)
+    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
+    record_value = record_value.strip()
+    if record_value.endswith("."):
+        record_value = record_value[:-1]
+    if new_record_type == "MX" :
+        # Query existing MX records
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}".replace("@.", "")
+        answers = resolver.resolve(fqdn, "MX")
+        current_mx = [r.to_text() for r in answers]  # Example: "10 mail-23.shirin.local."
+        match = None
+        for mx in current_mx:
+            if record_value in mx:  # Match if value exists
+                match = mx
+                break
+        if not match:
+            return
+        update.delete(new_record, "MX", match)
+    elif new_record_type == "NS":
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}".replace("@.", "")
+        answers = resolver.resolve(fqdn, "NS")
+        current_NS = [r.to_text() for r in answers]
+        match = None
+        for NS in current_NS:
+            if record_value in NS:  # Match if value exists
+                match =NS
+                break
+        if not match:
+            return
+        update.delete(new_record, "NS", match)
+    elif new_record_type == "PTR":
+        print("deleting ptr records")
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}"
+        print(fqdn)
+        answers = resolver.resolve(fqdn, "PTR")
+        current_ptr = [r.to_text() for r in answers]
+        match = None
+        for ptr in current_ptr:
+            if record_value.rstrip(".") == ptr.rstrip("."):
+
+                match = ptr
+                break
+        if not match:
+            return
+        update.delete(new_record, "PTR", match)
         dns.query.tcp(update, location_ip_master)
-        response = dns.query.tcp(update, location_ip_master)
-        if response.rcode() != dns.rcode.NOERROR:
-            error_text = dns.rcode.to_text(response.rcode())
-            raise HTTPException(
-                status_code=403,
-                detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
-            )
-        run_apply(zone, location_ip_master)
+    elif new_record_type == "CNAME":
+        fqdn = f"{new_record}.{zone}.".lower()
+        update.delete(fqdn, "CNAME")  # Delete entire RRset
+    else:
+        update.delete(new_record, new_record_type)
+    dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master)
+    if response.rcode() != dns.rcode.NOERROR:
+        error_text = dns.rcode.to_text(response.rcode())
+        raise HTTPException(
+            status_code=403,
+            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+        )
+    run_apply(zone, location_ip_master)
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
@@ -498,10 +501,10 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             wait_for_forwarder_reload(location_ip_forwarder, zone)
             check_forwarder_N += 1
         elif check_forwarder_N == settings.MAX_RETRY-1:
-             raise HTTPException(
-                  status_code=403,
-                  detail={"error": "فرواردر ها با مستر سینک نشده اند."}
-                  )
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "فرواردر ها با مستر سینک نشده اند."}
+            )
         elif check_forwarder_N == settings.MAX_RETRY:
             if record_type == "A":
                 ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
@@ -574,7 +577,7 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):
                         data[3],  # new_record_value
                         data[5],  # location_ip_master
                         data[6],  # location_ip_forwarder
-                    )
+                   )
 
                     del values_for_multiple_records[stored_key]
                     logger.warning(f"Rolled back {stored_key} (op_id={operation_id}), Record deleted")
