@@ -330,11 +330,9 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             return
         update.delete(new_record, "NS", match)
     elif new_record_type == "PTR":
-        print("deleting ptr records")
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
         fqdn = f"{new_record}.{zone}"
-        print(fqdn)
         answers = resolver.resolve(fqdn, "PTR")
         current_ptr = [r.to_text() for r in answers]
         match = None
