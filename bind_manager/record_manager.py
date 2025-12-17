@@ -75,8 +75,8 @@ def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, locati
     if int(new_record) >= PTR_LAST_OCTET_LIMIT:
         logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
         raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: مقدار رکورد بیشتر از 254 میباشد", "ptr_record": new_record}
+            status_code=400,  #Bad request
+            detail={"error": "Invalid PTR record value. Last octet must be less than 254.", "ptr_record": new_record}
         )
     ptr_records=get_all_ptr_records(zone, location_ip_master)
     targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
