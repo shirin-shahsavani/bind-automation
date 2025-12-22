@@ -125,8 +125,15 @@ def get_all_ptr_records(zone_name, location_ip_master):
 
 def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+    try:
+        add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+        logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+
+    except:
+        raise HTTPException(
+        status_code=400,  # BAD_REQUEST
+        detail={"error": "Invalid IPv6 address for AAAA record"}
+    )
 
 def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
@@ -134,9 +141,7 @@ def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,locati
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 ,operation_id, mx_priority=10):
-    add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    new_record_value=f"{mx_priority} {new_record}.{zone}."
+    new_record_value=f"{mx_priority} {new_record_value}."
     add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
@@ -148,6 +153,7 @@ def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,locat
 
 def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
+    print(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
 
@@ -587,7 +593,7 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):
 
                     del values_for_multiple_records[stored_key]
                     logger.warning(f"Rolled back {stored_key} (op_id={operation_id}), Record deleted")
-            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} , The record didn't add.")
+            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} , The record did not add.")
         except httpx.HTTPStatusError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Forwarder reload request failed: {e.response.text}")

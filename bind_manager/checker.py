@@ -133,6 +133,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             except Exception as e:
                 logger.warning(f"Invalid IPv6 address provided: {e}")
         elif new_record_type == "TXT":
+            print("TXTTTTTTTTTTTT")
             expected_txt = new_record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt in found_txt_records:
