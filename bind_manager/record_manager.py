@@ -153,7 +153,6 @@ def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,locat
 
 def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
-    print(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
 
