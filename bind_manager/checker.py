@@ -43,19 +43,45 @@ def record_existance(zone,new_record,new_record_type,location_ip_master):
         return False
 
     elif new_record_type == "NS":
-        new_ns_record = f"{new_record}.{zone}."
+        new_ns_record = f"{new_record}"
         try:
-            zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=dns.name.from_text(settings.KEY_NAME),keyalgorithm=settings.KEY_ALGORITHM))
+            zone_data = dns.zone.from_xfr(
+                dns.query.xfr(
+                    location_ip_master,
+                    zone,
+                    keyring=keyring,
+                    keyname=dns.name.from_text(settings.KEY_NAME),
+                    keyalgorithm=settings.KEY_ALGORITHM,
+                )
+            )
         except Exception as e:
             logger.error(f"AXFR failed: {e}")
             return False
+
+        record_value = new_ns_record.rstrip(".").lower() + "."
+
         for name, node in zone_data.nodes.items():
+
+            # NS records are always on zone apex (@)
+            if str(name) != "@":
+                continue
+
             for rdataset in node.rdatasets:
-                record_type = dns.rdatatype.to_text(rdataset.rdtype)
-                if str(f"{name}.{zone}.") == new_ns_record:
-                    logger.info (f"NS record already exists")
-                    #record_found = True
-                    return True
+
+                # check type
+                if rdataset.rdtype != dns.rdatatype.NS:
+                    continue
+
+                for rdata in rdataset:
+
+                    # check value
+                    if str(rdata.target) == new_ns_record:
+                        logger.info(
+                            f"NS record already exists: {zone}. -> {record_value}.{zone}"
+                        )
+                        return True
+
+        return False
 
     else :
         """Retrieve zone data via AXFR transfer."""

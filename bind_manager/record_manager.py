@@ -146,8 +146,8 @@ def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,locatio
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
 def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
-    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"A record {new_record_value} successfully added to zone {zone}")
+    #add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+    #logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
@@ -186,9 +186,6 @@ def verify_forwarder_after_record_add(
         check_forwarder_N=1,
 
 ) :
-    # if operation_id is None:
-    #     operation_id = str(uuid.uuid4())
-
     key_name = f"{new_record_type}-{new_record}"
 
     values_for_multiple_records[key_name] = {
@@ -221,58 +218,6 @@ def verify_forwarder_after_record_add(
 
             wait_for_forwarder_reload(location_ip_forwarder, zone,operation_id)
             check_forwarder_N += 1
-
-        # elif check_forwarder_N == settings.MAX_RETRY - 1:
-        #     logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
-        #     record_values = {
-        #         key: values_for_multiple_records[f"{key}-{new_record}"]
-        #         for key in ["A", "PTR", "MX", "NS"]
-        #         if f"{key}-{new_record}" in values_for_multiple_records
-        #     }
-        #     print(new_record_type)#############################
-        #     if new_record_type == "A":
-        #         for key in [f"A-{new_record}", f"PTR-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     if new_record_type == "MX":
-        #         for key in [f"A-{new_record}", f"PTR-{new_record}", f"MX-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     elif new_record_type == "NS":
-        #         for key in [f"NS-{new_record}", f"A-{new_record}", f"PTR-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     else:
-        #         delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
-        #
-        #         raise HTTPException(
-        #             status_code=403,
-        #             detail={"error": f"فرواردر {location_ip_forwarder} با مستر سینک نیست و رکورد حذف شد."},
-        #         )
 
         elif check_forwarder_N == settings.MAX_RETRY - 1:
             logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
