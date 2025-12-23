@@ -32,8 +32,8 @@ def add_record(zone,new_record,new_record_type, new_record_value, ttl, priority,
     record_exist=checker.record_existance(zone,new_record,new_record_type, location_ip_master)
     if record_exist:
         raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: این رکورد با آدرس دیگری ثبت شده است "}
+            status_code=409, #conflict
+            detail={"error": "This record already exists with another address and cannot be added again. "}
         )
     return add_record_by_type(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
 
@@ -57,8 +57,8 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
         ipaddress.IPv4Address(new_record_value)
     except ValueError:
         raise HTTPException(
-            status_code=404,
-            detail={"error": " مقدار وارد شده درست نمیباشد", "value": new_record_value}
+            status_code=400, #BAD_REQUEST
+            detail={"error": "The provided value is not a valid IPv4 address.", "value": new_record_value}
         )
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
@@ -71,24 +71,32 @@ def add_A_record(zone,new_record,new_record_type, new_record_value, ttl,location
 
 def add_PTR_record(zone,new_record,new_record_type, new_record_value,ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
-    PTR_LAST_OCTET_LIMIT =254
-    if int(new_record) >= PTR_LAST_OCTET_LIMIT:
-        logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
+    try:
+        PTR_LAST_OCTET_LIMIT =254
+        if int(new_record) >= PTR_LAST_OCTET_LIMIT:
+            logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
+            raise HTTPException(
+                status_code=400,  #Bad request
+                detail={"error": "Invalid PTR record value. Last octet must be less than 254.", "ptr_record": new_record}
+            )
+        ptr_records=get_all_ptr_records(zone, location_ip_master)
+        targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
+        if new_record_value in targets_only:
+            logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "The record value already exists.", "ptr_record": new_record_value}
+            )
+        logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
+        add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
+        logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
+
+    except ValueError:
         raise HTTPException(
-            status_code=404,
-            detail={"error": "درخواست شما با خطا مواجه شد. دلیل: مقدار رکورد بیشتر از 254 میباشد", "ptr_record": new_record}
+            status_code=400,  # BAD_REQUEST
+            detail={"error": "The value is not proper for PTR record"}
         )
-    ptr_records=get_all_ptr_records(zone, location_ip_master)
-    targets_only = {target for _, target in ptr_records}  # use set for O(1) lookup
-    if new_record_value in targets_only:
-        logger.error(f"PTR record value {new_record_value} already exists in zone {zone}")
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "مقدار رکورد قبلا ثبت شده است.", "ptr_record": new_record_value}
-        )
-    logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
-    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2,operation_id)
-    logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
+
 
 def get_all_ptr_records(zone_name, location_ip_master):
     """
@@ -117,8 +125,15 @@ def get_all_ptr_records(zone_name, location_ip_master):
 
 def add_AAAA_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
-    add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+    try:
+        add_record_func(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+        logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
+
+    except:
+        raise HTTPException(
+        status_code=400,  # BAD_REQUEST
+        detail={"error": "Invalid IPv6 address for AAAA record"}
+    )
 
 def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
@@ -126,15 +141,13 @@ def add_TXT_record(zone,new_record,new_record_type, new_record_value, ttl,locati
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2 ,operation_id, mx_priority=10):
-    add_A_record(zone,new_record,"A", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    new_record_value=f"{mx_priority} {new_record}.{zone}."
+    new_record_value=f"{mx_priority} {new_record_value}."
     add_record_func(zone,"@","MX", new_record_value, ttl,location_ip_master,  location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
 def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
-    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    logger.info(f"A record {new_record_value} successfully added to zone {zone}")
+    #add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+    #logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
@@ -160,22 +173,19 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
 
 values_for_multiple_records = {}
 def verify_forwarder_after_record_add(
-    zone,
-    new_record,
-    new_record_type,
-    new_record_value,
-    ttl,
-    location_ip_master,
-    location_ip_forwarder,
-    location_ip_forwarder_1,
-    location_ip_forwarder_2,
-    operation_id,
-    check_forwarder_N=1,
+        zone,
+        new_record,
+        new_record_type,
+        new_record_value,
+        ttl,
+        location_ip_master,
+        location_ip_forwarder,
+        location_ip_forwarder_1,
+        location_ip_forwarder_2,
+        operation_id,
+        check_forwarder_N=1,
 
-):
-    # if operation_id is None:
-    #     operation_id = str(uuid.uuid4())
-
+) :
     key_name = f"{new_record_type}-{new_record}"
 
     values_for_multiple_records[key_name] = {
@@ -206,60 +216,8 @@ def verify_forwarder_after_record_add(
                 check_forwarder_N = settings.MAX_RETRY
                 continue
 
-            wait_for_forwarder_reload(location_ip_forwarder, zone)
+            wait_for_forwarder_reload(location_ip_forwarder, zone,operation_id)
             check_forwarder_N += 1
-
-        # elif check_forwarder_N == settings.MAX_RETRY - 1:
-        #     logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
-        #     record_values = {
-        #         key: values_for_multiple_records[f"{key}-{new_record}"]
-        #         for key in ["A", "PTR", "MX", "NS"]
-        #         if f"{key}-{new_record}" in values_for_multiple_records
-        #     }
-        #     print(new_record_type)#############################
-        #     if new_record_type == "A":
-        #         for key in [f"A-{new_record}", f"PTR-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     if new_record_type == "MX":
-        #         for key in [f"A-{new_record}", f"PTR-{new_record}", f"MX-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     elif new_record_type == "NS":
-        #         for key in [f"NS-{new_record}", f"A-{new_record}", f"PTR-{new_record}"]:
-        #             if key in record_values:
-        #                 delete_record_logic(
-        #                     record_values[key][0],
-        #                     record_values[key][1],
-        #                     record_values[key][2],
-        #                     record_values[key][3],
-        #                     record_values[key][5],
-        #                     record_values[key][6],
-        #                 )
-        #
-        #     else:
-        #         delete_record_logic(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder)
-        #
-        #         raise HTTPException(
-        #             status_code=403,
-        #             detail={"error": f"فرواردر {location_ip_forwarder} با مستر سینک نیست و رکورد حذف شد."},
-        #         )
 
         elif check_forwarder_N == settings.MAX_RETRY - 1:
             logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
@@ -275,12 +233,12 @@ def verify_forwarder_after_record_add(
                         data[5],  # location_ip_master
                         data[6],  # location_ip_forwarder
                     )
-                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id})")
                     del values_for_multiple_records[stored_key]
+                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id})")
 
             raise HTTPException(
-                status_code=403,
-                detail={"error": f"فورواردِ {location_ip_forwarder} با مستر سینک نیست و رکوردهای عملیات حذف شدند."},
+                status_code=502,
+                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
             )
 
         elif check_forwarder_N == settings.MAX_RETRY:
@@ -296,68 +254,69 @@ def delete_record_logic (zone,record_name,record_type,record_value ,location_ip_
     delete_record(zone,record_name,record_type,record_value,location_ip_master)
 
 def delete_record(zone, new_record, new_record_type, record_value, location_ip_master):
-        update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
-        record_value = record_value.strip()
-        if record_value.endswith("."):
-            record_value = record_value[:-1]
-        if new_record_type == "MX" :
-            # Query existing MX records
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}".replace("@.", "")
-            answers = resolver.resolve(fqdn, "MX")
-            current_mx = [r.to_text() for r in answers]  # Example: "10 mail-23.shirin.local."
-            match = None
-            for mx in current_mx:
-                if record_value in mx:  # Match if value exists
-                    match = mx
-                    break
-            if not match:
-                return
-            update.delete(new_record, "MX", match)
-        elif new_record_type == "NS":
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}".replace("@.", "")
-            answers = resolver.resolve(fqdn, "NS")
-            current_NS = [r.to_text() for r in answers]
-            match = None
-            for NS in current_NS:
-                if record_value in NS:  # Match if value exists
-                    match =NS
-                    break
-            if not match:
-                return
-            update.delete(new_record, "NS", match)
-        elif new_record_type == "PTR":
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_master]
-            fqdn = f"{new_record}.{zone}"
-            answers = resolver.resolve(fqdn, "PTR")
-            current_ptr = [r.to_text() for r in answers]
-            match = None
-            for ptr in current_ptr:
-                if record_value.rstrip(".") == ptr.rstrip("."):
-                    match = ptr
-                    break
-            if not match:
-                return
-            update.delete(new_record, "PTR", match)
-            #dns.query.tcp(update, location_ip_master)
-        elif new_record_type == "CNAME":
-            fqdn = f"{new_record}.{zone}.".lower()
-            update.delete(fqdn, "CNAME")  # Delete entire RRset
-        else:
-            update.delete(new_record, new_record_type)
+    update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
+    record_value = record_value.strip()
+    if record_value.endswith("."):
+        record_value = record_value[:-1]
+    if new_record_type == "MX" :
+        # Query existing MX records
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}".replace("@.", "")
+        answers = resolver.resolve(fqdn, "MX")
+        current_mx = [r.to_text() for r in answers]  # Example: "10 mail-23.shirin.local."
+        match = None
+        for mx in current_mx:
+            if record_value in mx:  # Match if value exists
+                match = mx
+                break
+        if not match:
+            return
+        update.delete(new_record, "MX", match)
+    elif new_record_type == "NS":
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}".replace("@.", "")
+        answers = resolver.resolve(fqdn, "NS")
+        current_NS = [r.to_text() for r in answers]
+        match = None
+        for NS in current_NS:
+            if record_value in NS:  # Match if value exists
+                match =NS
+                break
+        if not match:
+            return
+        update.delete(new_record, "NS", match)
+    elif new_record_type == "PTR":
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        fqdn = f"{new_record}.{zone}"
+        answers = resolver.resolve(fqdn, "PTR")
+        current_ptr = [r.to_text() for r in answers]
+        match = None
+        for ptr in current_ptr:
+            if record_value.rstrip(".") == ptr.rstrip("."):
+
+                match = ptr
+                break
+        if not match:
+            return
+        update.delete(new_record, "PTR", match)
         dns.query.tcp(update, location_ip_master)
-        response = dns.query.tcp(update, location_ip_master)
-        if response.rcode() != dns.rcode.NOERROR:
-            error_text = dns.rcode.to_text(response.rcode())
-            raise HTTPException(
-                status_code=403,
-                detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
-            )
-        run_apply(zone, location_ip_master)
+    elif new_record_type == "CNAME":
+        fqdn = f"{new_record}.{zone}.".lower()
+        update.delete(fqdn, "CNAME")  # Delete entire RRset
+    else:
+        update.delete(new_record, new_record_type)
+    dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master)
+    if response.rcode() != dns.rcode.NOERROR:
+        error_text = dns.rcode.to_text(response.rcode())
+        raise HTTPException(
+            status_code=403,
+            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+        )
+    run_apply(zone, location_ip_master)
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
@@ -498,10 +457,10 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             wait_for_forwarder_reload(location_ip_forwarder, zone)
             check_forwarder_N += 1
         elif check_forwarder_N == settings.MAX_RETRY-1:
-             raise HTTPException(
-                  status_code=403,
-                  detail={"error": "فرواردر ها با مستر سینک نشده اند."}
-                  )
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "فرواردر ها با مستر سینک نشده اند."}
+            )
         elif check_forwarder_N == settings.MAX_RETRY:
             if record_type == "A":
                 ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
@@ -534,20 +493,21 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
 
 
 def run_apply(zone, location_ip_master):
+    """apply freeze and thaw command on master server."""
     api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
     cipher_suite = Fernet(settings.fernet_key.encode())
     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
 
     headers = {"token": token}
     try:
-        r = requests.get(api1_url, headers=headers, timeout=5)
+        requests.get(api1_url, headers=headers, timeout=5)
         logger.info(f"Running apply command for zone {zone} on master {location_ip_master}")
     except requests.RequestException as e:
         logger.error(f"Master apply failed for zone {zone} - {e}")
-        raise HTTPException(status_code=403, detail={"error": "The master did not update"})
+        raise HTTPException(status_code=502, detail={"error": "Failed to apply changes on the master server."})
 
 
-def wait_for_forwarder_reload(forwarder_ip: str, zone: str):
+def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):
     cipher_suite = Fernet(settings.fernet_key.encode())
     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
     headers = {"token": token}
@@ -563,7 +523,21 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str):
         except httpx.RequestError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Failed to contact forwarder {forwarder_ip}: {e}")
-            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip}")
+            for stored_key, info in list(values_for_multiple_records.items()):
+                if info["operation_id"] == operation_id:
+                    data = info["data"]
+                    delete_record_logic(
+                        data[0],  # zone
+                        data[1],  # new_record
+                        data[2],  # new_record_type
+                        data[3],  # new_record_value
+                        data[5],  # location_ip_master
+                        data[6],  # location_ip_forwarder
+                   )
+
+                    del values_for_multiple_records[stored_key]
+                    logger.warning(f"Rolled back {stored_key} (op_id={operation_id}), Record deleted")
+            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} , The record did not add.")
         except httpx.HTTPStatusError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Forwarder reload request failed: {e.response.text}")
