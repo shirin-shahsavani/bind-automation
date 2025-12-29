@@ -107,7 +107,7 @@ def get_location_ips(location: str):
 
 @app.get("/{zone}/{command}/")
 def run_command(zone:str , command:str, request:Request, token: Annotated[str | None, Header()] = None ):
-    authenticate_user(request.client.host, token)
+    authenticate_user_master(request.client.host, token)
     checker.check_command_type(command)
     checker.zone_existance(zone)
     run.run_command(zone)
