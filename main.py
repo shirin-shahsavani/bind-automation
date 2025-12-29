@@ -36,6 +36,10 @@ class RecordDetail(BaseModel):
     location:str
     second_value : str = None
 
+class CommandDetail(BaseModel):
+    zone: str
+    command: str
+
     @field_validator("location")
     def validate_location( cls , location: str):
         if location not in settings.locations_ip:
@@ -100,6 +104,14 @@ def get_location_ips(location: str):
         )
     return loc_data["master"], loc_data["forwarder_1"], loc_data["forwarder_2"]
 
+
+@app.get("/{zone}/{command}/")
+def run_command(zone:str , command:str, request:Request, token: Annotated[str | None, Header()] = None ):
+    authenticate_user(request.client.host, token)
+    checker.check_command_type(command)
+    checker.zone_existance(zone)
+    run.run_command(zone)
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
