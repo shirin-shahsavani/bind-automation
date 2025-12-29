@@ -40,15 +40,15 @@ class CommandDetail(BaseModel):
     zone: str
     command: str
 
-    @field_validator("location")
-    def validate_location( cls , location: str):
-        if location not in settings.locations_ip:
-            logger.warning(f"Invalid location provided: {location}")
-            raise HTTPException(
-                status_code=404, #NOT_FOUND
-                detail={ "error": "This location does not exist", "location": location}
-            )
-        return location
+@field_validator("location")
+def validate_location( cls , location: str):
+    if location not in settings.locations_ip:
+        logger.warning(f"Invalid location provided: {location}")
+        raise HTTPException(
+            status_code=404, #NOT_FOUND
+            detail={ "error": "This location does not exist", "location": location}
+        )
+    return location
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type:str , detail:RecordDetail ,request:Request, token: Annotated[str | None, Header()] = None ):
@@ -105,7 +105,7 @@ def get_location_ips(location: str):
     return loc_data["master"], loc_data["forwarder_1"], loc_data["forwarder_2"]
 
 
-@app.get("/{zone}/{command}/")
+@app.post("/{zone}/{command}/")
 def run_command(zone:str , command:str,  detail:RecordDetail, request:Request, token: Annotated[str | None, Header()] = None ):
     location_ip_master = get_location_ips(detail.location)
     authenticate_user_master(request.client.host, token)

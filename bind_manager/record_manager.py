@@ -493,6 +493,7 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
 
 
 def run_apply(zone, location_ip_master):
+    print("run_apply started")
     """apply freeze and thaw command on master server."""
     api1_url = f"http://{location_ip_master}:8000/{zone}/apply/"
     cipher_suite = Fernet(settings.fernet_key.encode())
