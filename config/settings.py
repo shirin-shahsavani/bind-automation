@@ -8,6 +8,13 @@ class Settings(BaseSettings):
     KEY_SECRET:str
     KEY_ALGORITHM: str
 
+    #master
+    KEY_NAME_MASTER: str
+    KEY_SECRET_MASTER: str
+    KEY_ALGORITHM_MASTER: str
+    USER_AUTHENTICATION_KEY_MASTER:str
+
+
     MAX_RETRY:int
 
     # test
