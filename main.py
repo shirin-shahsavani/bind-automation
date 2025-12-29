@@ -7,7 +7,7 @@ from fastapi import FastAPI , Header ,Request , HTTPException
 from bind_manager import record_manager
 import uvicorn
 from config.settings import settings
-from utilities import authenticate_user
+from utilities import authenticate_user , authenticate_user_master
 from fastapi.responses import JSONResponse
 from config.logging_config import setup_logging
 import uuid
