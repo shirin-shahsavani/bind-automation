@@ -146,8 +146,8 @@ def add_MX_record(zone,new_record, new_record_type,new_record_value, ttl,locatio
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
 def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
-    #add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    #logger.info(f"A record {new_record_value} successfully added to zone {zone}")
+    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+    logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
