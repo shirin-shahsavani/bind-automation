@@ -19,7 +19,12 @@ import dns.message
 import dns.flags
 import dns.name
 import dns.rcode
+from run import run_command
 import uuid
+
+#from main import run_command_func
+
+#from main import run_command_func
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -167,7 +172,7 @@ def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, loca
             status_code=403,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
-    run_apply(zone,location_ip_master)
+    run_command(zone)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
 
@@ -316,7 +321,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             status_code=403,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
-    run_apply(zone, location_ip_master)
+    run_command(zone)
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
@@ -378,7 +383,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
     else:
-        run_apply(zone, location_ip_master)
+        run_command(zone)
 
 def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
@@ -397,10 +402,10 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
             update.delete(record_value,"A")
             dns.query.tcp(update, location_ip_master)
-            run_apply(zone, location_ip_master)
+            run_command(zone)
             update.add(new_record_value,ttl,"A",resolved_ips[0])
             dns.query.tcp(update, location_ip_master)
-            run_apply(zone, location_ip_master)
+            run_command(zone)
             #update.replace(record_name, ttl, record_type, new_record_value)
 
         del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
@@ -423,10 +428,10 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
             del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
             update.delete(record_value, "A")
             dns.query.tcp(update, location_ip_master)
-            run_apply(zone, location_ip_master)
+            run_command(zone)
             update.add(new_record_value, ttl, "A", resolved_ips[0])
             dns.query.tcp(update, location_ip_master)
-            run_apply(zone, location_ip_master)
+            run_command(zone)
             add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
 
 
@@ -434,7 +439,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
-    run_apply(zone,location_ip_master)
+    run_command(zone)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_add(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 ,operation_id)
 
@@ -491,22 +496,22 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
 
     return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
 
-from main import run_command
-def run_apply(zone, location_ip_master):
-    print("run_apply started")
-    """apply freeze and thaw command on master server."""
 
-    api1_url =run_command(zone, command="apply" ) #f"http://{location_ip_master}:8000/{zone}/apply/"
-    cipher_suite = Fernet(settings.fernet_key.encode())
-    token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
-
-    headers = {"token": token}
-    try:
-        requests.get(api1_url, headers=headers, timeout=5)
-        logger.info(f"Running apply command for zone {zone} on master {location_ip_master}")
-    except requests.RequestException as e:
-        logger.error(f"Master apply failed for zone {zone} - {e}")
-        raise HTTPException(status_code=502, detail={"error": "Failed to apply changes on the master server."})
+# def run_apply(zone, location_ip_master):
+#     print("run_apply started")
+#     """apply freeze and thaw command on master server."""
+#
+#     api1_url =run_command_func(zone, command="apply" ) #f"http://{location_ip_master}:8000/{zone}/apply/"
+#     cipher_suite = Fernet(settings.fernet_key.encode())
+#     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
+#
+#     headers = {"token": token}
+#     try:
+#         requests.get(api1_url, headers=headers, timeout=5)
+#         logger.info(f"Running apply command for zone {zone} on master {location_ip_master}")
+#     except requests.RequestException as e:
+#         logger.error(f"Master apply failed for zone {zone} - {e}")
+#         raise HTTPException(status_code=502, detail={"error": "Failed to apply changes on the master server."})
 
 
 def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):

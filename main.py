@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from config.logging_config import setup_logging
 import uuid
 from bind_manager import checker
-import run
+from run import run_command
 from typing import Annotated, Union
 
 
@@ -106,12 +106,12 @@ def get_location_ips(location: str):
 
 
 @app.post("/{zone}/{command}/")
-def run_command(zone:str , command:str,  detail:RecordDetail, request:Request, token: Annotated[str | None, Header()] = None ):
+def run_command_func(zone:str , command:str,  detail:RecordDetail, request:Request, token: Annotated[str | None, Header()] = None ):
     location_ip_master = get_location_ips(detail.location)
     authenticate_user_master(request.client.host, token)
     checker.check_command_type(command)
     checker.zone_existance(zone,location_ip_master)
-    run.run_command(zone)
+    run_command(zone)
 
 
 if __name__ == "__main__":
