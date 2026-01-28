@@ -22,7 +22,7 @@ def check_record_type(record_type):
     if record_type not in ["A","AAAA", "NS" ,"MX","CNAME", "TXT", "PTR"]:
         raise HTTPException(
             status_code=404,
-            detail={"error": "The record could not be created because the record type is incorrect.", "type": record_type}
+            detail={"error": "The record type is not correct.", "type": record_type}
         )
 
 def zone_existance(zone, location_ip_master):
