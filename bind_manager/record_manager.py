@@ -408,7 +408,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
             run_command(zone)
             #update.replace(record_name, ttl, record_type, new_record_value)
 
-        del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
+        del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
         mx_priority = "10"
         new_record_value = f"{mx_priority} {new_record_value}"
         add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
@@ -425,7 +425,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master)
+            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
             update.delete(record_value, "A")
             dns.query.tcp(update, location_ip_master)
             run_command(zone)
@@ -471,7 +471,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
                 ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
                 ptr_name = record_value.split(".")[-1]
                 ptr_value=f"{record_name}.{zone}."
-                del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master)
+                del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master,operation_id)
                 return
             else:
                 return

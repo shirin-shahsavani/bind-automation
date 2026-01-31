@@ -253,9 +253,14 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
             logger.error(f"DNS query failed: {e} . forwarder does not available")
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "Forwarder is not answering."}
+                )
             response = None
-
+        print("########################################")
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+        print("checked")
         if record_type == "A":
             if record_value not in resolved_ips:
                 check_forwarder_N = settings.MAX_RETRY
