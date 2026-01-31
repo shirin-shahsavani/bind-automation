@@ -323,7 +323,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
         )
     run_command(zone)
 
-def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master):
+def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master,operation_id):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
     record_value = record_value.strip()
     if new_record_type == "NS":
@@ -443,11 +443,11 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_add(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 ,operation_id)
 
-def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2):
+def del_record(zone,record_name,record_type, record_value, ttl, priority, location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id):
     checker.check_record_type(record_type)
     checker.zone_existance(zone,location_ip_master )
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master)
+    del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master,operation_id)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
 
