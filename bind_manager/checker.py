@@ -398,7 +398,8 @@ def check_the_value(zone,record_name,record_type, record_value,location_ip_maste
     except:
         raise HTTPException(
             status_code=404,
-            detail={"error": "درخواست حذف رکورد شما با ارور مواجه شد. دلیل: رکورد با آدرس دیگری ثبت شده است."}
+            detail={"error": "Your record deletion request failed."
+                    "Reason: The record is registered with a different address."}
         )
 
 
