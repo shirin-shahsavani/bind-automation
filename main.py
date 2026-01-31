@@ -73,7 +73,8 @@ async def delete_record(record_type:str , detail:RecordDetail ,request:Request, 
         logger.info(f"Delete request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
         authenticate_user(request.client.host, token)
         location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-        record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, detail.ttl, detail.priority, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+        operation_id = str(uuid.uuid4())
+        record_manager.del_record(detail.zone,detail.record_name,record_type, detail.record_value, detail.ttl, detail.priority, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id=operation_id)
         logger.info(f"Record deleted successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
         return JSONResponse(content={
             "message": "The record was successfully deleted."
