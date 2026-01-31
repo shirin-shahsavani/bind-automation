@@ -464,7 +464,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
         elif check_forwarder_N == settings.MAX_RETRY-1:
             raise HTTPException(
                 status_code=403,
-                detail={"error": "فرواردر ها با مستر سینک نشده اند."}
+                detail={"error": "Forwarders are not sync with master."}
             )
         elif check_forwarder_N == settings.MAX_RETRY:
             if record_type == "A":
