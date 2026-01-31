@@ -449,9 +449,9 @@ def del_record(zone,record_name,record_type, record_value, ttl, priority, locati
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master,operation_id)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2)
+        check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
 
-def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
 
     while check_forwarder_N <= settings.MAX_RETRY:
         if check_forwarder_N < settings.MAX_RETRY:
@@ -459,7 +459,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             if result == settings.MAX_RETRY:
                 check_forwarder_N = settings.MAX_RETRY  # success, go on
                 continue
-            wait_for_forwarder_reload(location_ip_forwarder, zone)
+            wait_for_forwarder_reload(location_ip_forwarder, zone,operation_id)
             check_forwarder_N += 1
         elif check_forwarder_N == settings.MAX_RETRY-1:
             raise HTTPException(
