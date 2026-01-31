@@ -127,9 +127,9 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         else:
             raise HTTPException(
                 status_code=404,
-                detail={"error":"درخواست حذف رکورد شما با ارور مواجه شد. "
-                                "دلیل:عدم وجود رکورد"}
-        )
+                detail={"error":"Your record deletion request failed."
+                                "Reason: The record does not exist."}
+            )
 
 def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
     if new_record_type in ["A", "AAAA", "TXT"]:
