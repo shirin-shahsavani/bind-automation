@@ -544,7 +544,7 @@ def wait_for_forwarder_reload(forwarder_ip: str, zone: str,operation_id):
 
                     del values_for_multiple_records[stored_key]
                     logger.warning(f"Rolled back {stored_key} (op_id={operation_id}), Record deleted")
-            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} , The record did not add.")
+            raise HTTPException(status_code=503, detail=f"Forwarder not reachable: {forwarder_ip} ")
         except httpx.HTTPStatusError as e:
             logger.error(f"Forwarder reload failed for zone {zone} - {e}")
             logger.error(f"Forwarder reload request failed: {e.response.text}")
