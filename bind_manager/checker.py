@@ -252,15 +252,13 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
         except Exception as e:
-            logger.error(f"DNS query failed: {e} . forwarder does not available")
+            logger.error(f"DNS query failed: {e} . forwarder is not  available")
             raise HTTPException(
                 status_code=403,
                 detail={"error": "Forwarder is not answering."}
                 )
             response = None
-        print("########################################")
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-        print("checked")
         if record_type == "A":
             if record_value not in resolved_ips:
                 check_forwarder_N = settings.MAX_RETRY
@@ -338,35 +336,47 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         return False
 
     if record_type == "CNAME":
+        print('record_type == "CNAME"')
         fqdn = f"{new_record}.{zone}".rstrip('.')
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_forwarder]
         try:
-            answers = resolver.resolve(fqdn, "CNAME", raise_on_no_answer=False)
+            response = dns.query.udp(query, location_ip_forwarder, timeout=3)
+            print(response)
+            try:
+                 answers = resolver.resolve(fqdn, "CNAME", raise_on_no_answer=False)
             # Handle case: the domain exists, but has no CNAME
-            if not answers.rrset:
+                 if not answers.rrset:
+                     resolved_target = None
+                     check_forwarder_N = settings.MAX_RETRY
+                     return check_forwarder_N
+            # Got a CNAME
+                 resolved_target = str(answers[0].target).rstrip('.')
+            except dns.resolver.NXDOMAIN:
+                logger.info(f"{fqdn} does not exist in DNS.")
                 resolved_target = None
                 check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
-            # Got a CNAME
-            resolved_target = str(answers[0].target).rstrip('.')
-        except dns.resolver.NXDOMAIN:
-            logger.info(f"{fqdn} does not exist in DNS.")
-            resolved_target = None
-            check_forwarder_N = settings.MAX_RETRY
-            return check_forwarder_N
-        except Exception:
-            resolved_target = None
-            check_forwarder_N = settings.MAX_RETRY
-            return check_forwarder_N
+            except Exception:
+                resolved_target = None
+                check_forwarder_N = settings.MAX_RETRY
+                return check_forwarder_N
         # Compare resolved target with expected CNAME
-        expected_cname = record_value.rstrip('.')
-        if resolved_target and resolved_target.lower() != expected_cname.lower():
-            check_forwarder_N = settings.MAX_RETRY
-            return check_forwarder_N
-        else:
-            if resolved_target is None:
-                return False
+            expected_cname = record_value.rstrip('.')
+            if resolved_target and resolved_target.lower() != expected_cname.lower():
+                check_forwarder_N = settings.MAX_RETRY
+                return check_forwarder_N
+            else:
+                if resolved_target is None:
+                    return False
+        except Exception as e:
+            logger.warning(f"DNS query failed: {e} . forwarder does not available")
+            response = None
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "Forwarder is not answering."}
+                )
+
 
 def check_the_value(zone,record_name,record_type, record_value,location_ip_master):
     resolver = dns.resolver.Resolver()
