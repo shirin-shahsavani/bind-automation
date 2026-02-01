@@ -338,6 +338,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
     if record_type == "CNAME":
         print('record_type == "CNAME"')
         fqdn = f"{new_record}.{zone}".rstrip('.')
+        query = dns.message.make_query(fqdn, dns.rdatatype.from_text(record_type))
+        query.flags |= dns.flags.RD
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_forwarder]
         try:
