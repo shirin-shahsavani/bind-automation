@@ -447,17 +447,12 @@ def del_record(zone,record_name,record_type, record_value, ttl, priority, locati
     checker.check_record_type(record_type)
     checker.zone_existance(zone,location_ip_master )
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    print("deleting")
     del_record_for_deletation(zone,record_name,record_type,record_value,location_ip_master,operation_id)
-    print("deleted")
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
-        print (location_ip_forwarder)
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
-    print("check_forwarder_after_deletation")
     while check_forwarder_N <= settings.MAX_RETRY:
-        print("check_forwarder_N <= settings.MAX_RETRY")
         if check_forwarder_N < settings.MAX_RETRY:
             result =checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
             if result == settings.MAX_RETRY:
@@ -471,7 +466,6 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
                 detail={"error": "Forwarders are not sync with master."}
             )
         elif check_forwarder_N == settings.MAX_RETRY:
-            print("check_forwarder_N == settings.MAX_RETRY")
             if record_type == "A":
                 ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
                 ptr_name = record_value.split(".")[-1]
@@ -479,7 +473,6 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
                 del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master,operation_id)
                 return
             else:
-                print("return")
                 return
 
 def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,check_forwarder_N=1):
