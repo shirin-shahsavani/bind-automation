@@ -336,7 +336,6 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         return False
 
     if record_type == "CNAME":
-        print('record_type == "CNAME"')
         fqdn = f"{new_record}.{zone}".rstrip('.')
         query = dns.message.make_query(fqdn, dns.rdatatype.from_text(record_type))
         query.flags |= dns.flags.RD
@@ -344,7 +343,6 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         resolver.nameservers = [location_ip_forwarder]
         try:
             response = dns.query.udp(query, location_ip_forwarder, timeout=3)
-            print(response)
             try:
                  answers = resolver.resolve(fqdn, "CNAME", raise_on_no_answer=False)
             # Handle case: the domain exists, but has no CNAME
