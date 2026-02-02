@@ -101,7 +101,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
 
-    if new_record_type in ["MX" , "NS"]:
+    if new_record_type in ["MX"]:
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
         attr_map = {"MX": "exchange", "NS": "target"}
@@ -119,9 +119,12 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
         records = []
         for name, node in zone_data.nodes.items():
             for rdataset in node.rdatasets:
+                if new_record_type == "NS":
+                    name=f"{zone}."
+ 
                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
                 records.append(f"{name}.{zone} {record_type}")
-                if str(name)==new_record and record_type == new_record_type:
+                if name==new_record and record_type == new_record_type:
                     check_the_value(zone,new_record, new_record_type, record_value ,location_ip_master)
                     return True
         else:

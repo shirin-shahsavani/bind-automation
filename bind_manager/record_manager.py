@@ -325,8 +325,6 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master,operation_id):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
-    print(record_value)
-    #record_value = record_value.strip()
     if new_record_type == "NS":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -335,14 +333,8 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         current_NS = [r.to_text() for r in answers]
         match = None
         if record_value in current_NS:
-            print("record value is in current_NS")
             for NS in current_NS:
-               print("NS=",NS)
                if record_value == NS:
-                #print(NS)
-                   print("record_value=",record_value)
-                   print(NS)
-                   print(new_record)
                    update.delete(new_record, "NS", NS)
                    response = dns.query.tcp(update, location_ip_master)
                    break
