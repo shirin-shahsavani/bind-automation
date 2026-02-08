@@ -336,7 +336,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
             for NS in current_NS:
                if record_value == NS:
                    update.delete(new_record, "NS", NS)
-                   response = dns.query.tcp(update, location_ip_master)
+                   #response = dns.query.tcp(update, location_ip_master)
                    break
         else:
             raise HTTPException(
@@ -455,28 +455,30 @@ def del_record(zone,record_name,record_type, record_value, ttl, priority, locati
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
+    
     while check_forwarder_N <= settings.MAX_RETRY:
-        if check_forwarder_N < settings.MAX_RETRY:
+        logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY}")
+
+        if check_forwarder_N < settings.MAX_RETRY-1:
             result =checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
             if result == settings.MAX_RETRY:
-                check_forwarder_N = settings.MAX_RETRY  # success, go on
+                logger.info(f" Forwarder {location_ip_forwarder} synced successfully.")
+                check_forwarder_N = settings.MAX_RETRY
                 continue
+
             wait_for_forwarder_reload(location_ip_forwarder, zone,operation_id)
             check_forwarder_N += 1
-        elif check_forwarder_N == settings.MAX_RETRY-1:
+
+        elif check_forwarder_N == settings.MAX_RETRY - 1:
+            logger.error(f"Forwarder {location_ip_forwarder} did not sync.")
             raise HTTPException(
-                status_code=403,
-                detail={"error": "Forwarders are not sync with master."}
+                status_code=502,
+                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
             )
+
         elif check_forwarder_N == settings.MAX_RETRY:
-            if record_type == "A":
-                ptr_zone = ".".join(record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-                ptr_name = record_value.split(".")[-1]
-                ptr_value=f"{record_name}.{zone}."
-                del_record_for_deletation(ptr_zone,ptr_name,"PTR", ptr_value, location_ip_master,operation_id)
-                return
-            else:
-                return
+            logger.info(f"🟢 Forwarder verification loop completed.")
+            return None
 
 def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,check_forwarder_N=1):
     checker.check_record_type(record_type)

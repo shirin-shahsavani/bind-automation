@@ -334,9 +334,11 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             if expected_ns not in ns_list:
                 check_forwarder_N = settings.MAX_RETRY
                 return check_forwarder_N
+            else:
+                return False
         except Exception as e:
             logger.error(f"Error checking NS: {e}")
-        return False
+        #return False
 
     if record_type == "CNAME":
         fqdn = f"{new_record}.{zone}".rstrip('.')
