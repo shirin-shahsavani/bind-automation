@@ -111,15 +111,21 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
                 value_in_server = str(getattr(rdata, attr_map[new_record_type])).rstrip('.')
                 if value_in_server.lower() == record_value.rstrip('.').lower():
                     return True
+                else:
+                    raise HTTPException(
+                        status_code=404,
+                        detail={"error": "Your record deletion request failed."
+                                 "Reason: The record does not exist."}
+                      )
+
             return False
         except Exception as e:
             logger.warning(f"Error checking {new_record_type}: {e}")
             raise HTTPException(
-                status_code=404,
-                detail={"error": "Your record deletion request failed."
+                        status_code=404,
+                        detail={"error": "Your record deletion request failed."
                                  "Reason: The record does not exist."}
-            )
-
+                         )
     else:
         records = []
         for name, node in zone_data.nodes.items():
