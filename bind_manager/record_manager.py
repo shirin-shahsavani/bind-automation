@@ -373,7 +373,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         if not match:
             raise HTTPException(
                 status_code=404,
-                detail={"error": "رکورد MX با این مقدار وجود ندارد",}
+                detail={"error": "This record value does not exist.(MX)",}
             )
         update.delete(new_record, "MX", match)
     else:
