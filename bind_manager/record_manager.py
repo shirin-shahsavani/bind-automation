@@ -382,7 +382,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
         raise HTTPException(
-            status_code=403,
+            status_code=502,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
     else:
