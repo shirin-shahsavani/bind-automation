@@ -121,11 +121,11 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             return False
         except Exception as e:
             logger.warning(f"Error checking {new_record_type}: {e}")
-            raise HTTPException(
-                        status_code=404,
-                        detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
-                         )
+            #raise HTTPException(
+            #            status_code=404,
+            #            detail={"error": "Your record deletion request failed."
+            #                     "Reason: The record does not exist."}
+            #             )
     else:
         records = []
         for name, node in zone_data.nodes.items():
@@ -319,15 +319,12 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         try:
             answers = resolver.resolve(zone, "MX")
             for rdata in answers:
-                rdata: MX
-                mx_record_in_server = str(rdata.exchange).rstrip('.')
+                mx_record_in_server = str(rdata.exchange)  ##.rstrip('.')
                 new_record_value = record_value    ##.split()[1].rstrip('.')
-                mx_value.append(new_record_value)
-                if mx_record_in_server.lower() != new_record_value.lower():
+                mx_value.append(mx_record_in_server)
+            if record_value not in mx_value:
                     check_forwarder_N = settings.MAX_RETRY
                     return check_forwarder_N
-                else:
-                    break
 
             return False
         except Exception as e:
