@@ -126,6 +126,40 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             #            detail={"error": "Your record deletion request failed."
             #                     "Reason: The record does not exist."}
             #             )
+    elif new_record_type in ["PTR"]:
+        fqdn_name = f"{new_record}.{zone}."
+        record_value = record_value.rstrip(".") + "."
+
+        for name, node in zone_data.nodes.items():
+            node_fqdn = f"{name}.{zone}."
+
+            # 1️⃣ check name
+            if node_fqdn != fqdn_name:
+                continue
+
+            for rdataset in node.rdatasets:
+                # 2️⃣ check type
+                if rdataset.rdtype != dns.rdatatype.PTR:
+                    continue
+
+                for rdata in rdataset:
+                    # 3️⃣ check value
+                    if str(rdata.target).lower() == record_value.lower():
+                        logger.info(
+                            f"PTR record exists: {fqdn_name} -> {record_value}"
+                        )
+                        return True
+
+            # name exists but PTR value does not match
+            break
+
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "Your record deletion request failed.",
+                "reason": "PTR record does not exist."
+            }
+        )
     else:
         records = []
         for name, node in zone_data.nodes.items():
