@@ -353,12 +353,14 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         answers = resolver.resolve(fqdn , "PTR")
         current_ptr = [r.to_text() for r in answers]
         match = None
-        for ptr in current_ptr:
-            if record_value.rstrip(".") == ptr.rstrip("."):
-                match = ptr
-                break
-        if not match:
-            return
+        if record_value in current_ptr:
+             update.delete(new_record, new_record_type,record_value)
+        else:
+             raise HTTPException(
+                 status_code=403,
+                 detail={"error": f"This record value does not exist ", "record_value": record_value}
+                 )
+
     elif new_record_type == "MX":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -458,8 +460,8 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
     
     while check_forwarder_N <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY}")
-
         if check_forwarder_N < settings.MAX_RETRY-1:
+
             result =checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder)
             if result == settings.MAX_RETRY:
                 logger.info(f" Forwarder {location_ip_forwarder} synced successfully.")

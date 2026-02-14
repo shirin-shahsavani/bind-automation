@@ -121,21 +121,55 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             return False
         except Exception as e:
             logger.warning(f"Error checking {new_record_type}: {e}")
-
+            #raise HTTPException(
+            #            status_code=404,
+            #            detail={"error": "Your record deletion request failed."
+            #                     "Reason: The record does not exist."}
+            #             )
     elif new_record_type in ["PTR"]:
+        print(new_record_type)
         fqdn_name = f"{new_record}.{zone}."
+        print("fqdn_name",fqdn_name)
         record_value = record_value.rstrip(".") + "."
+        print("record_value",record_value)
+
+
         ptr_value=[]
         for name, node in zone_data.nodes.items():
             node_fqdn = f"{name}.{zone}."
+            #print(node_fqdn)
             ptr_value.append(node_fqdn)
-        if fqdn_name not in  ptr_value:
-            raise HTTPException(
-                        status_code=404,
-                        detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
-                         )
+        print(ptr_value)
 
+            # 1️⃣ check name
+        if fqdn_name not in  ptr_value:
+            print("1")
+            #continue
+
+        for rdataset in node.rdatasets:
+                # 2️⃣ check type
+                if rdataset.rdtype != dns.rdatatype.PTR:
+                    print("2")
+                  #  continue
+
+        for rdata in rdataset:
+                    # 3️⃣ check value
+                    if str(rdata.target).lower() == record_value.lower():
+                        logger.info(
+                            f"PTR record exists: {fqdn_name} -> {record_value}"
+                        )
+                        print("3")
+                        return True
+
+            # name exists but PTR value does not match
+
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "Your record deletion request failed.",
+                "reason": "PTR record does not exist."
+            }
+        )
     else:
         records = []
         for name, node in zone_data.nodes.items():
@@ -308,24 +342,19 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 return check_forwarder_N
 
     if record_type == "PTR":
-        try:
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [location_ip_forwarder]
-            fqdn = f"{new_record}.{zone}"
-            answers = resolver.resolve(fqdn, "PTR")
-
-            current_ptr = [r.to_text() for r in answers]
-            if record_value not in current_ptr:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
-        except:
-            logger.warning(f"DNS query failed. forwarder does not available")
-            response = None
-            raise HTTPException(
-                status_code=403,
-                detail={"error": "Forwarder is not answering."}
-                )
-
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_forwarder]
+        fqdn = f"{new_record}.{zone}"
+        answers = resolver.resolve(fqdn, "PTR")
+        current_ptr = [r.to_text() for r in answers]
+        match = None
+        for ptr in current_ptr:
+            if record_value.rstrip(".") == ptr.rstrip("."):
+                match = ptr
+                break
+        if not match:
+            check_forwarder_N = settings.MAX_RETRY
+            return check_forwarder_N
     if record_type in ["MX"]:
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
