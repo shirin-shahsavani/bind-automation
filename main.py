@@ -89,7 +89,8 @@ async def update_record(record_type:str , detail:RecordDetail ,request:Request, 
         logger.info(f"Update request from {request.client.host} for zone={detail.zone}, record={detail.record_name}, type={record_type}")
         authenticate_user(request.client.host, token)
         location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2 = get_location_ips(detail.location)
-        record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
+        operation_id = str(uuid.uuid4())
+        record_manager.update_record_progress(detail.zone,detail.record_name,record_type,detail.record_value,detail.second_value,detail.ttl,detail.priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id=operation_id)
         logger.info(f"Record updated successfully: {detail.record_name}.{detail.zone} -> {detail.second_value}")
         return JSONResponse(content={
             "message": "The record value was successfully updated."

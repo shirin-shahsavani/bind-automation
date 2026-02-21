@@ -482,7 +482,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             logger.info(f"🟢 Forwarder verification loop completed.")
             return None
 
-def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,check_forwarder_N=1):
+def update_record_progress(zone,record_name,record_type,record_value,second_value,ttl,priority,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id,check_forwarder_N=1):
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
