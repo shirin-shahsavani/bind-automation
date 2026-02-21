@@ -390,7 +390,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
     else:
         run_command(zone)
 
-def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,check_forwarder_N=1):
+def update_record(zone,record_name,record_type,  new_record_value,record_value,ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
     if record_type == "MX":
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
@@ -486,18 +486,18 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
-    update_record(zone,record_name,record_type,second_value,record_value,ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2)
-    if record_type == "A":
-        ptr_zone = ".".join(second_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-        ptr_name = record_value.split(".")[-1]
-        new_ptr_name=second_value.split(".")[-1]
-        ptr_value = f"{record_name}.{zone}."
-        try:
-            delete_record_logic(ptr_zone, ptr_name, "PTR", ptr_value, location_ip_master, location_ip_forwarder_1)
-            add_record(ptr_zone, new_ptr_name, "PTR", ptr_value,ttl, priority, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
-        except Exception as e:
-            logger.warning(e)
-            return {"status": "warning", "message": "رکورد اصلی با موفقیت تغییر کرد، اما به‌روزرسانی PTR با خطا مواجه شد."}
+    update_record(zone,record_name,record_type,second_value,record_value,ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
+    # if record_type == "A":
+    #     ptr_zone = ".".join(second_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+    #     ptr_name = record_value.split(".")[-1]
+    #     new_ptr_name=second_value.split(".")[-1]
+    #     ptr_value = f"{record_name}.{zone}."
+    #     try:
+    #         delete_record_logic(ptr_zone, ptr_name, "PTR", ptr_value, location_ip_master, location_ip_forwarder_1)
+    #         add_record(ptr_zone, new_ptr_name, "PTR", ptr_value,ttl, priority, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
+    #     except Exception as e:
+    #         logger.warning(e)
+    #         return {"status": "warning", "message": "رکورد اصلی با موفقیت تغییر کرد، اما به‌روزرسانی PTR با خطا مواجه شد."}
 
 
     return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
