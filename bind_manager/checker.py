@@ -100,7 +100,6 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
     """Retrieve zone data via AXFR transfer."""
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
-
     if new_record_type in ["MX"]:
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -145,15 +144,14 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
  
                 record_type = dns.rdatatype.to_text(rdataset.rdtype)
                 records.append(f"{name}.{zone} {record_type}")
-                if name==new_record and record_type == new_record_type:
+                if str(name)==new_record and record_type == new_record_type:
                     check_the_value(zone,new_record, new_record_type, record_value ,location_ip_master)
                     return True
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail={"error":"Your record deletion request failed."
-                                "Reason: The record does not exist."}
-            )
+        raise HTTPException(
+            status_code=404,
+            detail={"error":"Your record deletion request failed."
+                             "Reason: The record does not exist."}
+             )
 
 def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value, location_ip_master, location_ip_forwarder):
     if new_record_type in ["A", "AAAA", "TXT"]:
