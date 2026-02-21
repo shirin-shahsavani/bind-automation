@@ -298,19 +298,7 @@ def verify_forwarder_after_record_update(
             check_forwarder_N += 1
 
         elif check_forwarder_N == settings.MAX_RETRY - 1:
-            logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
-
-            for stored_key, info in list(values_for_multiple_records.items()):
-                if info["operation_id"] == operation_id:
-                    data = info["data"]
-                    delete_record_logic(
-                        data[0],  # zone
-                        data[1],  # new_record
-                        data[2],  # new_record_type
-                        data[3],  # new_record_value
-                        data[5],  # location_ip_master
-                        data[6],  # location_ip_forwarder
-                    )
+            logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}.")
 
             raise HTTPException(
                 status_code=502,
@@ -514,6 +502,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
+        print("TESTING")
     run_command(zone)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 ,operation_id)
