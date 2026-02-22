@@ -496,6 +496,17 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         except Exception as e:
             logger.warning(e)
             response = None
+
+        if response and response.answer:
+            resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
+            update.delete(record_value, "A")
+            dns.query.tcp(update, location_ip_master)
+            run_command(zone)
+            update.add(new_record_value, ttl, "A", resolved_ips[0])
+            dns.query.tcp(update, location_ip_master)
+            run_command(zone)
+            add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
     elif record_type == "PTR":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -510,17 +521,6 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
                 status_code=403,
                 detail={"error": f"This record value does not exist ", "record_value": record_value}
             )
-        if response and response.answer:
-            resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
-            update.delete(record_value, "A")
-            dns.query.tcp(update, location_ip_master)
-            run_command(zone)
-            update.add(new_record_value, ttl, "A", resolved_ips[0])
-            dns.query.tcp(update, location_ip_master)
-            run_command(zone)
-            add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
-
 
     else:
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)
