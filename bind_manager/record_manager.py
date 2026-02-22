@@ -518,6 +518,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         if record_value in current_ptr:
             update.delete(record_name, record_type, record_value)
             #update.replace(record_name, ttl, record_type, new_record_value)
+            dns.query.tcp(update, location_ip_master)
         else:
             raise HTTPException(
                 status_code=403,
@@ -527,7 +528,7 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
     else:
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
-        #dns.query.tcp(update, location_ip_master)
+        dns.query.tcp(update, location_ip_master)
     run_command(zone)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1, location_ip_forwarder_2 ,operation_id)
