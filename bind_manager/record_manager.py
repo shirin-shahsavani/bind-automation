@@ -516,7 +516,8 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         current_ptr = [r.to_text() for r in answers]
         match = None
         if record_value in current_ptr:
-            update.replace(record_name, ttl, record_type, new_record_value)
+            update.delete(record_name, record_type, record_value)
+            #update.replace(record_name, ttl, record_type, new_record_value)
         else:
             raise HTTPException(
                 status_code=403,
