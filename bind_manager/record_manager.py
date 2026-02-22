@@ -519,6 +519,9 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
             update.delete(record_name, record_type, record_value)
             #update.replace(record_name, ttl, record_type, new_record_value)
             dns.query.tcp(update, location_ip_master)
+            update.add(record_name, record_type, record_value)
+            update.add(record_name, ttl, record_type, new_record_value)
+            dns.query.tcp(update, location_ip_master)
         else:
             raise HTTPException(
                 status_code=403,
