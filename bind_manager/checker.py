@@ -133,7 +133,7 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
                         status_code=404,
                         detail={"error": "Your record deletion request failed."
                                  "Reason: The record does not exist."}
-                         )
+            )
 
     else:
         records = []
