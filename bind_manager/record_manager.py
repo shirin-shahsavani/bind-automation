@@ -249,6 +249,7 @@ def verify_forwarder_after_record_add(
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
             return None
 
+values_for_multiple_records = {}
 def verify_forwarder_after_record_update(
         zone,
         new_record,
