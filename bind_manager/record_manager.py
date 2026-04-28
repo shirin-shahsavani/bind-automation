@@ -165,13 +165,13 @@ def add_CNAME_record(zone,new_record,new_record_type, new_record_value, ttl,loca
 def add_record_func(zone,new_record,new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id,check_forwarder_N=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
-    response = dns.query.tcp(update, location_ip_master)
-    if response.rcode() != dns.rcode.NOERROR:
-        error_text = dns.rcode.to_text(response.rcode())
-        raise HTTPException(
-            status_code=403,
-            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
-        )
+    #response = dns.query.tcp(update, location_ip_master)
+    #if response.rcode() != dns.rcode.NOERROR:
+    #    error_text = dns.rcode.to_text(response.rcode())
+    #    raise HTTPException(
+    #        status_code=403,
+    #        detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+    #    )
     run_command(zone)
     for location_ip_forwarder in [location_ip_forwarder_1 , location_ip_forwarder_2]:
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,location_ip_forwarder,location_ip_forwarder_1 , location_ip_forwarder_2,operation_id)
@@ -486,9 +486,27 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
         mx_priority = "10"
         new_record_value = f"{mx_priority} {new_record_value}"
-        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
 
     elif record_type == "NS":
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [location_ip_master]
+        #fqdn = f"{new_record}.{zone}".replace("@.", "")
+        answers = resolver.resolve( zone, "NS")
+        current_NS = [r.to_text() for r in answers]
+        match = None
+        if record_value in current_NS:
+            for NS in current_NS:
+               if record_value == NS:
+                   update.delete(record_name, "NS", NS)
+                   #response = dns.query.tcp(update, location_ip_master)
+                   break
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": f"This record value does not exist ", "record_value": record_value}
+                 )
+
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
         query.flags |= dns.flags.RD  # Recursion Desired flag
         resolved_ips = []
@@ -500,14 +518,14 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
-            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
-            update.delete(record_value, "A")
-            dns.query.tcp(update, location_ip_master)
-            run_command(zone)
-            update.add(new_record_value, ttl, "A", resolved_ips[0])
-            dns.query.tcp(update, location_ip_master)
-            run_command(zone)
-            add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2)
+       #     del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
+       #     update.delete(record_value, "A")
+       #     dns.query.tcp(update, location_ip_master)
+       #     run_command(zone)
+        update.add(new_record_value, ttl, "A", resolved_ips[0])
+        dns.query.tcp(update, location_ip_master)
+        run_command(zone)
+        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
     elif record_type == "PTR":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -516,10 +534,12 @@ def update_record(zone,record_name,record_type,  new_record_value,record_value,t
         current_ptr = [r.to_text() for r in answers]
         match = None
         if record_value in current_ptr:
+            update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
             update.delete(record_name, record_type, record_value)
-            #update.replace(record_name, ttl, record_type, new_record_value)
-            dns.query.tcp(update, location_ip_master)
-            update.add(record_name, record_type, record_value)
+            answer=dns.query.tcp(update, location_ip_master)
+            run_command(zone)
+
+            update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}), keyalgorithm=settings.KEY_ALGORITHM)
             update.add(record_name, ttl, record_type, new_record_value)
             dns.query.tcp(update, location_ip_master)
         else:
@@ -575,20 +595,7 @@ def update_record_progress(zone,record_name,record_type,record_value,second_valu
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone ,record_name,record_type,record_value, location_ip_master)
     update_record(zone,record_name,record_type,second_value,record_value,ttl,location_ip_master,location_ip_forwarder_1,location_ip_forwarder_2,operation_id)
-    # if record_type == "A":
-    #     ptr_zone = ".".join(second_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-    #     ptr_name = record_value.split(".")[-1]
-    #     new_ptr_name=second_value.split(".")[-1]
-    #     ptr_value = f"{record_name}.{zone}."
-    #     try:
-    #         delete_record_logic(ptr_zone, ptr_name, "PTR", ptr_value, location_ip_master, location_ip_forwarder_1)
-    #         add_record(ptr_zone, new_ptr_name, "PTR", ptr_value,ttl, priority, location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2)
-    #     except Exception as e:
-    #         logger.warning(e)
-    #         return {"status": "warning", "message": "رکورد اصلی با موفقیت تغییر کرد، اما به‌روزرسانی PTR با خطا مواجه شد."}
-
-
-    return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
+#    return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
 
 
 # def run_apply(zone, location_ip_master):

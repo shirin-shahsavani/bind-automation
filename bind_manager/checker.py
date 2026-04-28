@@ -108,18 +108,23 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             answers = resolver.resolve(zone, new_record_type)
             for rdata in answers:
                 value_in_server = str(getattr(rdata, attr_map[new_record_type])).rstrip('.')
-                if value_in_server.lower() == record_value.rstrip('.').lower():
-                    return True
-                else:
-                    raise HTTPException(
-                        status_code=404,
-                        detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
-                      )
+                if str(value_in_server.lower()) == str(record_value.rstrip('.').lower()):
+                        return True
+            raise HTTPException(
+                    status_code=404,
+                    detail={"error": "Your record deletion request failed."
+                                    "Reason: The record does not exist."}
+                                 )
 
-            return False
-        except Exception as e:
+            #return False
+        except HTTPException as e:
             logger.warning(f"Error checking {new_record_type}: {e}")
+            raise HTTPException(
+                    status_code=404,
+                    detail={"error": "Your record deletion request failed."
+                                    "Reason: The record does not exist."}
+                                 )
+
 
     elif new_record_type in ["PTR"]:
         fqdn_name = f"{new_record}.{zone}."
@@ -132,8 +137,9 @@ def record_existance_check_delete(zone,new_record,new_record_type,record_value, 
             raise HTTPException(
                         status_code=404,
                         detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
-            )
+                                         "Reason: The record does not exist."}
+                     )
+
 
     else:
         records = []
@@ -202,7 +208,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                     resolved_ips.append(str(item))
         suffix = f".{zone}."
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
-        if new_record_value in cleaned:
+        if new_record_value in resolved_ips:
             check_forwarder_N = settings.MAX_RETRY
             return check_forwarder_N
     if new_record_type in ["MX"]:
