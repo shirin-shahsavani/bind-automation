@@ -8,7 +8,6 @@ import dns.tsigkeyring  # authenticate
 import dns.resolver  # chech zone
 import dns.rdatatype
 import dns.reversename
-import requests
 from cryptography.fernet import Fernet
 from bind_manager import checker
 import ipaddress
@@ -20,11 +19,6 @@ import dns.flags
 import dns.name
 import dns.rcode
 from run import run_command
-import uuid
-
-# from main import run_command_func
-
-# from main import run_command_func
 
 setup_logging()
 logger = logging.getLogger(__name__)
