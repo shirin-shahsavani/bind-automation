@@ -67,6 +67,8 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                     forwarders, operation_id)
+    print(forwarders)
+
     if settings.AUTO_CREATE_PTR_FOR_A_RECORD:
         ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
         ptr_name = new_record_value.split(".")[-1]
@@ -78,7 +80,7 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
 
 
 def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                   location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+                   forwarders, operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
     try:
         PTR_LAST_OCTET_LIMIT = 254
@@ -99,7 +101,7 @@ def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl, loc
             )
         logger.info(f"Adding PTR record {new_record_value} -> {new_record}.{zone}")
         add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                        location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                        forwarders, operation_id)
         logger.info(f"PTR record {new_record_value} successfully added to zone {zone}")
 
     except ValueError:
@@ -136,11 +138,11 @@ def get_all_ptr_records(zone_name, location_ip_master):
 
 
 def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+                    forwarders, operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
     try:
         add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                        location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                        forwarders, operation_id)
         logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
 
     except:
@@ -151,36 +153,31 @@ def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl, lo
 
 
 def add_TXT_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                   location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+                   forwarders, operation_id):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                    forwarders, operation_id)
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 
-def add_MX_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                  location_ip_forwarder_2, operation_id, mx_priority=10):
+def add_MX_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id, mx_priority=10):
     new_record_value = f"{mx_priority} {new_record_value}."
-    add_record_func(zone, "@", "MX", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                    location_ip_forwarder_2, operation_id)
+    add_record_func(zone, "@", "MX", new_record_value, ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
 
-def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                  location_ip_forwarder_2, operation_id):
-    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                    location_ip_forwarder_2, operation_id)
+def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,forwarders, operation_id):
+    add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
-    add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, location_ip_forwarder_1,
-                    location_ip_forwarder_2, operation_id)
+    add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
 
 def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                     location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+                     forwarders, operation_id):
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                    forwarders, operation_id)
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
 
 
@@ -189,15 +186,17 @@ def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, lo
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
-    # response = dns.query.tcp(update, location_ip_master)
-    # if response.rcode() != dns.rcode.NOERROR:
-    #    error_text = dns.rcode.to_text(response.rcode())
-    #    raise HTTPException(
-    #        status_code=403,
-    #        detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
-    #    )
+    response = dns.query.tcp(update, location_ip_master)
+    if response.rcode() != dns.rcode.NOERROR:
+       error_text = dns.rcode.to_text(response.rcode())
+       raise HTTPException(
+           status_code=403,
+           detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
+       )
     run_command(zone)
+    print(forwarders)
     for location_ip_forwarder in forwarders:
+        print("location_ip_forwarder:", location_ip_forwarder)
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                                           location_ip_forwarder,
                                           operation_id)
@@ -212,9 +211,11 @@ def verify_forwarder_after_record_add(
         location_ip_master,
         location_ip_forwarder,
         operation_id,
-        current_retry_attempt=1,
+        current_retry_attempt=1
 
 ):
+    print(zone,new_record,new_record_type,new_record_value,ttl,location_ip_master,location_ip_forwarder,operation_id,current_retry_attempt)
+
     key_name = f"{new_record_type}-{new_record}"
 
     values_for_multiple_records[key_name] = {
@@ -230,7 +231,10 @@ def verify_forwarder_after_record_add(
         ),
         "operation_id": operation_id,
     }
-
+    logger.info(type(settings.MAX_RETRY))
+    logger.info(settings.MAX_RETRY)
+    logger.info(type(current_retry_attempt))
+    logger.info(current_retry_attempt)
     while current_retry_attempt <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY} for {key_name}")
 
@@ -285,10 +289,8 @@ def verify_forwarder_after_record_update(
         ttl,
         location_ip_master,
         location_ip_forwarder,
-        location_ip_forwarder_1,
-        location_ip_forwarder_2,
         operation_id,
-        current_retry_attempt=1
+        current_retry_attempt=1,
 
 ):
     key_name = f"{new_record_type}-{new_record}"
@@ -302,9 +304,7 @@ def verify_forwarder_after_record_update(
             ttl,
             location_ip_master,
             location_ip_forwarder,
-            location_ip_forwarder_1,
-            location_ip_forwarder_2,
-            #current_retry_attempt,
+            current_retry_attempt,
         ),
         "operation_id": operation_id,
     }
@@ -478,7 +478,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
 
 
 def update_record(zone, record_name, record_type, new_record_value, record_value, ttl, location_ip_master,
-                  location_ip_forwarder_1, location_ip_forwarder_2, operation_id, current_retry_attempt=1):
+                  forwarders, operation_id, current_retry_attempt=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     if record_type == "MX":
@@ -504,8 +504,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
         mx_priority = "10"
         new_record_value = f"{mx_priority} {new_record_value}"
-        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                        location_ip_forwarder_2, operation_id)
+        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
 
     elif record_type == "NS":
         resolver = dns.resolver.Resolver()
@@ -544,8 +543,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         update.add(new_record_value, ttl, "A", resolved_ips[0])
         dns.query.tcp(update, location_ip_master)
         run_command(zone)
-        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                        location_ip_forwarder_2, operation_id)
+        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
     elif record_type == "PTR":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -578,26 +576,25 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
     run_command(zone)
-    for location_ip_forwarder in [location_ip_forwarder_1, location_ip_forwarder_2]:
+    for location_ip_forwarder in [forwarders]:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,
-                                             location_ip_forwarder, location_ip_forwarder_1, location_ip_forwarder_2,
+                                             location_ip_forwarder, forwarders,
                                              operation_id)
 
 
-def del_record(zone, record_name, record_type, record_value, ttl, priority, location_ip_master, location_ip_forwarder_1,
-               location_ip_forwarder_2, operation_id):
+def del_record(zone, record_name, record_type, record_value, ttl, priority, location_ip_master, forwarders, operation_id):
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
     del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
-    for location_ip_forwarder in [location_ip_forwarder_1, location_ip_forwarder_2]:
+    for location_ip_forwarder in [forwarders]:
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
-                                         location_ip_forwarder, location_ip_forwarder_1, location_ip_forwarder_2,
+                                         location_ip_forwarder, forwarders,
                                          operation_id)
 
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
-                                     location_ip_forwarder, location_ip_forwarder_1, location_ip_forwarder_2,
+                                     location_ip_forwarder, forwarders,
                                      operation_id, current_retry_attempt=1):
     while current_retry_attempt <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY}")
@@ -626,33 +623,14 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
 
 
 def update_record_progress(zone, record_name, record_type, record_value, second_value, ttl, priority,
-                           location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2, operation_id,
+                           location_ip_master, forwarders, operation_id,
                            current_retry_attempt=1):
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
     update_record(zone, record_name, record_type, second_value, record_value, ttl, location_ip_master,
-                  location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                  forwarders, operation_id)
 
-
-#    return {"status": "ok", "message": "رکورد با موفقیت به‌روزرسانی شد."}
-
-
-# def run_apply(zone, location_ip_master):
-#     print("run_apply started")
-#     """apply freeze and thaw command on master server."""
-#
-#     api1_url =run_command_func(zone, command="apply" ) #f"http://{location_ip_master}:8000/{zone}/apply/"
-#     cipher_suite = Fernet(settings.fernet_key.encode())
-#     token = cipher_suite.encrypt(settings.client_ip.encode()).decode()
-#
-#     headers = {"token": token}
-#     try:
-#         requests.get(api1_url, headers=headers, timeout=5)
-#         logger.info(f"Running apply command for zone {zone} on master {location_ip_master}")
-#     except requests.RequestException as e:
-#         logger.error(f"Master apply failed for zone {zone} - {e}")
-#         raise HTTPException(status_code=502, detail={"error": "Failed to apply changes on the master server."})
 
 
 def wait_for_forwarder_reload(forwarder_ip: str, zone: str, operation_id):
