@@ -32,7 +32,7 @@ keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 
 
 def add_record(zone, new_record, new_record_type, new_record_value, ttl, priority, location_ip_master,
-               location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+               forwarders, operation_id):
     checker.check_record_type(new_record_type)  ###Checking for correct type
     checker.zone_existance(zone, location_ip_master)  ###Check if the zone exists in nameserver
     record_exist = checker.record_existance(zone, new_record, new_record_type, location_ip_master)
@@ -42,11 +42,11 @@ def add_record(zone, new_record, new_record_type, new_record_value, ttl, priorit
             detail={"error": "This record already exists with another address and cannot be added again. "}
         )
     return add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                              location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                              forwarders, operation_id)
 
 
 def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                       location_ip_forwarder_1, location_ip_forwarder_2, operation_id):
+                       forwarders, operation_id):
     func_map = {
         "A": add_A_record,
         "AAAA": add_AAAA_record,
@@ -58,12 +58,10 @@ def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,
     }
 
     func = func_map.get(new_record_type)
-    return func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                location_ip_forwarder_2, operation_id)
+    return func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
 
 
-def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, location_ip_forwarder_1,
-                 location_ip_forwarder_2, operation_id):
+def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id):
     """" Add A record and PTR record """
     try:
         ipaddress.IPv4Address(new_record_value)
@@ -74,14 +72,14 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
         )
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id)
+                    forwarders, operation_id)
     if settings.AUTO_CREATE_PTR_FOR_A_RECORD:
         ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
         ptr_name = new_record_value.split(".")[-1]
         ptr_value = f"{new_record}.{zone}."
         logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
-        add_record_func(ptr_zone, ptr_name, "PTR", ptr_value, ttl, location_ip_master, location_ip_forwarder_1,
-                        location_ip_forwarder_2, operation_id)
+        add_record_func(ptr_zone, ptr_name, "PTR", ptr_value, ttl, location_ip_master,
+                        forwarders, operation_id)
         logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
 
 
@@ -193,7 +191,7 @@ def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl, l
 
 
 def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id, current_retry_attempt=1):
+                    forwarders, operation_id, current_retry_attempt=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
@@ -205,9 +203,9 @@ def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, lo
     #        detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
     #    )
     run_command(zone)
-    for location_ip_forwarder in [location_ip_forwarder_1, location_ip_forwarder_2]:
+    for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                                          location_ip_forwarder, location_ip_forwarder_1, location_ip_forwarder_2,
+                                          location_ip_forwarder,
                                           operation_id)
 
 
@@ -219,8 +217,6 @@ def verify_forwarder_after_record_add(
         ttl,
         location_ip_master,
         location_ip_forwarder,
-        location_ip_forwarder_1,
-        location_ip_forwarder_2,
         operation_id,
         current_retry_attempt=1,
 
@@ -236,8 +232,6 @@ def verify_forwarder_after_record_add(
             ttl,
             location_ip_master,
             location_ip_forwarder,
-            location_ip_forwarder_1,
-            location_ip_forwarder_2,
             current_retry_attempt,
         ),
         "operation_id": operation_id,
@@ -300,7 +294,7 @@ def verify_forwarder_after_record_update(
         location_ip_forwarder_1,
         location_ip_forwarder_2,
         operation_id,
-        current_retry_attempt=1,
+        current_retry_attempt=1
 
 ):
     key_name = f"{new_record_type}-{new_record}"
@@ -316,7 +310,7 @@ def verify_forwarder_after_record_update(
             location_ip_forwarder,
             location_ip_forwarder_1,
             location_ip_forwarder_2,
-            current_retry_attempt,
+            #current_retry_attempt,
         ),
         "operation_id": operation_id,
     }
