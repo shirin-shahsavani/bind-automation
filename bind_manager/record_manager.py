@@ -192,7 +192,7 @@ def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl, l
 
 
 def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id, check_forwarder_N=1):
+                    location_ip_forwarder_1, location_ip_forwarder_2, operation_id, current_retry_attempt=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
@@ -221,7 +221,7 @@ def verify_forwarder_after_record_add(
         location_ip_forwarder_1,
         location_ip_forwarder_2,
         operation_id,
-        check_forwarder_N=1,
+        current_retry_attempt=1,
 
 ):
     key_name = f"{new_record_type}-{new_record}"
@@ -237,27 +237,27 @@ def verify_forwarder_after_record_add(
             location_ip_forwarder,
             location_ip_forwarder_1,
             location_ip_forwarder_2,
-            check_forwarder_N,
+            current_retry_attempt,
         ),
         "operation_id": operation_id,
     }
 
-    while check_forwarder_N <= settings.MAX_RETRY:
-        logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY} for {key_name}")
+    while current_retry_attempt <= settings.MAX_RETRY:
+        logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY} for {key_name}")
 
-        if check_forwarder_N < settings.MAX_RETRY - 1:
+        if current_retry_attempt < settings.MAX_RETRY - 1:
             result = checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value,
                                                         location_ip_master, location_ip_forwarder)
 
             if result == settings.MAX_RETRY:
                 logger.info(f" Forwarder {location_ip_forwarder} synced successfully for {key_name}")
-                check_forwarder_N = settings.MAX_RETRY
+                current_retry_attempt = settings.MAX_RETRY
                 continue
 
             wait_for_forwarder_reload(location_ip_forwarder, zone, operation_id)
-            check_forwarder_N += 1
+            current_retry_attempt += 1
 
-        elif check_forwarder_N == settings.MAX_RETRY - 1:
+        elif current_retry_attempt == settings.MAX_RETRY - 1:
             logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}. Rolling back...")
 
             for stored_key, info in list(values_for_multiple_records.items()):
@@ -280,7 +280,7 @@ def verify_forwarder_after_record_add(
                     "error": f"ِForwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
             )
 
-        elif check_forwarder_N == settings.MAX_RETRY:
+        elif current_retry_attempt == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
             return None
 
@@ -299,7 +299,7 @@ def verify_forwarder_after_record_update(
         location_ip_forwarder_1,
         location_ip_forwarder_2,
         operation_id,
-        check_forwarder_N=1,
+        current_retry_attempt=1,
 
 ):
     key_name = f"{new_record_type}-{new_record}"
@@ -315,27 +315,27 @@ def verify_forwarder_after_record_update(
             location_ip_forwarder,
             location_ip_forwarder_1,
             location_ip_forwarder_2,
-            check_forwarder_N,
+            current_retry_attempt,
         ),
         "operation_id": operation_id,
     }
 
-    while check_forwarder_N <= settings.MAX_RETRY:
-        logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY} for {key_name}")
+    while current_retry_attempt <= settings.MAX_RETRY:
+        logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY} for {key_name}")
 
-        if check_forwarder_N < settings.MAX_RETRY - 1:
+        if current_retry_attempt < settings.MAX_RETRY - 1:
             result = checker.check_forwarder_for_adding(zone, new_record, new_record_type, new_record_value,
                                                         location_ip_master, location_ip_forwarder)
 
             if result == settings.MAX_RETRY:
                 logger.info(f" Forwarder {location_ip_forwarder} synced successfully for {key_name}")
-                check_forwarder_N = settings.MAX_RETRY
+                current_retry_attempt = settings.MAX_RETRY
                 continue
 
             wait_for_forwarder_reload(location_ip_forwarder, zone, operation_id)
-            check_forwarder_N += 1
+            current_retry_attempt += 1
 
-        elif check_forwarder_N == settings.MAX_RETRY - 1:
+        elif current_retry_attempt == settings.MAX_RETRY - 1:
             logger.error(f"Forwarder {location_ip_forwarder} did not sync for {key_name}.")
 
             raise HTTPException(
@@ -343,7 +343,7 @@ def verify_forwarder_after_record_update(
                 detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
             )
 
-        elif check_forwarder_N == settings.MAX_RETRY:
+        elif current_retry_attempt == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
             return None
 
@@ -489,7 +489,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
 
 
 def update_record(zone, record_name, record_type, new_record_value, record_value, ttl, location_ip_master,
-                  location_ip_forwarder_1, location_ip_forwarder_2, operation_id, check_forwarder_N=1):
+                  location_ip_forwarder_1, location_ip_forwarder_2, operation_id, current_retry_attempt=1):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     if record_type == "MX":
@@ -609,36 +609,36 @@ def del_record(zone, record_name, record_type, record_value, ttl, priority, loca
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
                                      location_ip_forwarder, location_ip_forwarder_1, location_ip_forwarder_2,
-                                     operation_id, check_forwarder_N=1):
-    while check_forwarder_N <= settings.MAX_RETRY:
-        logger.info(f"Forwarder check attempt {check_forwarder_N}/{settings.MAX_RETRY}")
-        if check_forwarder_N < settings.MAX_RETRY - 1:
+                                     operation_id, current_retry_attempt=1):
+    while current_retry_attempt <= settings.MAX_RETRY:
+        logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY}")
+        if current_retry_attempt < settings.MAX_RETRY - 1:
 
             result = checker.check_forwarder_del(zone, record_name, record_type, record_value, location_ip_master,
                                                  location_ip_forwarder)
             if result == settings.MAX_RETRY:
                 logger.info(f" Forwarder {location_ip_forwarder} synced successfully.")
-                check_forwarder_N = settings.MAX_RETRY
+                current_retry_attempt = settings.MAX_RETRY
                 continue
 
             wait_for_forwarder_reload(location_ip_forwarder, zone, operation_id)
-            check_forwarder_N += 1
+            current_retry_attempt += 1
 
-        elif check_forwarder_N == settings.MAX_RETRY - 1:
+        elif current_retry_attempt == settings.MAX_RETRY - 1:
             logger.error(f"Forwarder {location_ip_forwarder} did not sync.")
             raise HTTPException(
                 status_code=502,
                 detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
             )
 
-        elif check_forwarder_N == settings.MAX_RETRY:
+        elif current_retry_attempt == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed.")
             return None
 
 
 def update_record_progress(zone, record_name, record_type, record_value, second_value, ttl, priority,
                            location_ip_master, location_ip_forwarder_1, location_ip_forwarder_2, operation_id,
-                           check_forwarder_N=1):
+                           current_retry_attempt=1):
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)

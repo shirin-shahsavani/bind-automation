@@ -175,23 +175,23 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if new_record_type == "A":
             if new_record_value in resolved_ips:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
         elif new_record_type == "AAAA":
             try:
                 expected_ip = ipaddress.IPv6Address(new_record_value)
                 normalized_resolved = [ipaddress.IPv6Address(ip) for ip in resolved_ips]
                 if expected_ip in normalized_resolved:
-                    check_forwarder_N = settings.MAX_RETRY
-                    return check_forwarder_N
+                    current_retry_attempt = settings.MAX_RETRY
+                    return current_retry_attempt
             except Exception as e:
                 logger.warning(f"Invalid IPv6 address provided: {e}")
         elif new_record_type == "TXT":
             expected_txt = new_record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt in found_txt_records:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
     elif new_record_type in ["PTR"]:
         PTR_record = f"{new_record}.{zone}"
         query = dns.message.make_query(PTR_record, dns.rdatatype.from_text(new_record_type))
@@ -209,8 +209,8 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
         suffix = f".{zone}."
         cleaned = [name.removesuffix(suffix) for name in resolved_ips]
         if new_record_value in resolved_ips:
-            check_forwarder_N = settings.MAX_RETRY
-            return check_forwarder_N
+            current_retry_attempt = settings.MAX_RETRY
+            return current_retry_attempt
     if new_record_type in ["MX"]:
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
@@ -224,8 +224,8 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 new_record_value = new_record_value.split()[1].rstrip('.')
                 mx_value.append(new_record_value)
                 if mx_record_in_server.lower() == new_record_value.lower():
-                    check_forwarder_N = settings.MAX_RETRY
-                    return check_forwarder_N
+                    current_retry_attempt = settings.MAX_RETRY
+                    return current_retry_attempt
                 else:
                     break
             return False
@@ -242,8 +242,8 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
             expected_ns = new_record_value.rstrip('.')
             if expected_ns in ns_list:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
             else:
                 return False
         except Exception as e:
@@ -266,8 +266,8 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
             resolved_target = None
         expected_cname = new_record_value.rstrip('.')
         if resolved_target and resolved_target.lower() == expected_cname.lower():
-            check_forwarder_N = settings.MAX_RETRY
-            return check_forwarder_N
+            current_retry_attempt = settings.MAX_RETRY
+            return current_retry_attempt
         else:
             if resolved_target is None:
                 return False
@@ -289,15 +289,15 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if record_type == "A":
             if record_value not in resolved_ips:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
             else:
                 logger.info(f"Record {fqdn} is still exist. Found: {resolved_ips}")
         if record_type == "AAAA":
             try:
                 if record_value not in resolved_ips:
-                    check_forwarder_N = settings.MAX_RETRY
-                    return check_forwarder_N
+                    current_retry_attempt = settings.MAX_RETRY
+                    return current_retry_attempt
                 else:
                     logger.error(f"Record {fqdn} is still exist. Found: {resolved_ips}")
 
@@ -308,8 +308,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             expected_txt = record_value.strip('"')
             found_txt_records = [item.strip('"') for item in resolved_ips]
             if expected_txt not in found_txt_records:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
 
     if record_type == "PTR":
         try:
@@ -320,8 +320,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
 
             current_ptr = [r.to_text() for r in answers]
             if record_value not in current_ptr:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
         except:
             logger.warning(f"DNS query failed. forwarder does not available")
             response = None
@@ -342,8 +342,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 new_record_value = record_value    ##.split()[1].rstrip('.')
                 mx_value.append(mx_record_in_server)
             if record_value not in mx_value:
-                    check_forwarder_N = settings.MAX_RETRY
-                    return check_forwarder_N
+                    current_retry_attempt = settings.MAX_RETRY
+                    return current_retry_attempt
 
             return False
         except Exception as e:
@@ -359,8 +359,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             ns_list = [str(rdata.target).rstrip('.') for rdata in answers]
             expected_ns = record_value.rstrip('.')
             if expected_ns not in ns_list:
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
             else:
                 return False
         except Exception as e:
@@ -380,24 +380,24 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             # Handle case: the domain exists, but has no CNAME
                  if not answers.rrset:
                      resolved_target = None
-                     check_forwarder_N = settings.MAX_RETRY
-                     return check_forwarder_N
+                     current_retry_attempt = settings.MAX_RETRY
+                     return current_retry_attempt
             # Got a CNAME
                  resolved_target = str(answers[0].target).rstrip('.')
             except dns.resolver.NXDOMAIN:
                 logger.info(f"{fqdn} does not exist in DNS.")
                 resolved_target = None
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
             except Exception:
                 resolved_target = None
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
         # Compare resolved target with expected CNAME
             expected_cname = record_value.rstrip('.')
             if resolved_target and resolved_target.lower() != expected_cname.lower():
-                check_forwarder_N = settings.MAX_RETRY
-                return check_forwarder_N
+                current_retry_attempt = settings.MAX_RETRY
+                return current_retry_attempt
             else:
                 if resolved_target is None:
                     return False
