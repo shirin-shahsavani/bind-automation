@@ -67,8 +67,6 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                     forwarders, operation_id)
-    print(forwarders)
-
     if settings.AUTO_CREATE_PTR_FOR_A_RECORD:
         ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
         ptr_name = new_record_value.split(".")[-1]
@@ -194,9 +192,7 @@ def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, lo
            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
        )
     run_command(zone)
-    print(forwarders)
     for location_ip_forwarder in forwarders:
-        print("location_ip_forwarder:", location_ip_forwarder)
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                                           location_ip_forwarder,
                                           operation_id)
@@ -214,7 +210,6 @@ def verify_forwarder_after_record_add(
         current_retry_attempt=1
 
 ):
-    print(zone,new_record,new_record_type,new_record_value,ttl,location_ip_master,location_ip_forwarder,operation_id,current_retry_attempt)
 
     key_name = f"{new_record_type}-{new_record}"
 
@@ -478,7 +473,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
 
 
 def update_record(zone, record_name, record_type, new_record_value, record_value, ttl, location_ip_master,
-                  forwarders, operation_id, current_retry_attempt=1):
+                  forwarders, operation_id):
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     if record_type == "MX":
@@ -576,9 +571,9 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
     run_command(zone)
-    for location_ip_forwarder in [forwarders]:
+    for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,
-                                             location_ip_forwarder, forwarders,
+                                              location_ip_forwarder,
                                              operation_id)
 
 
@@ -587,15 +582,14 @@ def del_record(zone, record_name, record_type, record_value, ttl, priority, loca
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
     del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
-    for location_ip_forwarder in [forwarders]:
+    for location_ip_forwarder in forwarders:
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
-                                         location_ip_forwarder, forwarders,
+                                         location_ip_forwarder,
                                          operation_id)
 
 
 def check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
-                                     location_ip_forwarder, forwarders,
-                                     operation_id, current_retry_attempt=1):
+                                     location_ip_forwarder,operation_id, current_retry_attempt=1):
     while current_retry_attempt <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY}")
         if current_retry_attempt < settings.MAX_RETRY - 1:
@@ -622,9 +616,8 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             return None
 
 
-def update_record_progress(zone, record_name, record_type, record_value, second_value, ttl, priority,
-                           location_ip_master, forwarders, operation_id,
-                           current_retry_attempt=1):
+def update_record_progress(zone, record_name, record_type, record_value, second_value, ttl, priority, location_ip_master,
+                            forwarders, operation_id):
     checker.check_record_type(record_type)
     checker.zone_existance(zone, location_ip_master)
     checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
