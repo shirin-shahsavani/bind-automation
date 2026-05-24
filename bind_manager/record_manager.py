@@ -18,7 +18,7 @@ import dns.message
 import dns.flags
 import dns.name
 import dns.rcode
-from run import run_command
+from run import freeze_and_thaw_zone
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -191,7 +191,7 @@ def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, lo
            status_code=403,
            detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
        )
-    run_command(zone)
+    freeze_and_thaw_zone(zone)
     for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_add(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                                           location_ip_forwarder,
@@ -401,7 +401,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
             status_code=403,
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
-    run_command(zone)
+    freeze_and_thaw_zone(zone)
 
 
 def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master, operation_id):
@@ -469,7 +469,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
             detail={"error": f"DNS Update failed with rcode: {error_text}", "zone": zone}
         )
     else:
-        run_command(zone)
+        freeze_and_thaw_zone(zone)
 
 
 def update_record(zone, record_name, record_type, new_record_value, record_value, ttl, location_ip_master,
@@ -490,10 +490,10 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
             update.delete(record_value, "A")
             dns.query.tcp(update, location_ip_master)
-            run_command(zone)
+            freeze_and_thaw_zone(zone)
             update.add(new_record_value, ttl, "A", resolved_ips[0])
             dns.query.tcp(update, location_ip_master)
-            run_command(zone)
+            freeze_and_thaw_zone(zone)
             # update.replace(record_name, ttl, record_type, new_record_value)
 
         del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
@@ -534,10 +534,10 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         #     del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
         #     update.delete(record_value, "A")
         #     dns.query.tcp(update, location_ip_master)
-        #     run_command(zone)
+        #     freeze_and_thaw_zone(zone)
         update.add(new_record_value, ttl, "A", resolved_ips[0])
         dns.query.tcp(update, location_ip_master)
-        run_command(zone)
+        freeze_and_thaw_zone(zone)
         add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
     elif record_type == "PTR":
         resolver = dns.resolver.Resolver()
@@ -552,7 +552,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                                        keyalgorithm=settings.KEY_ALGORITHM)
             update.delete(record_name, record_type, record_value)
             answer = dns.query.tcp(update, location_ip_master)
-            run_command(zone)
+            freeze_and_thaw_zone(zone)
 
             update = dns.update.Update(zone,
                                        keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
@@ -570,7 +570,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                                    keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
         dns.query.tcp(update, location_ip_master)
-    run_command(zone)
+    freeze_and_thaw_zone(zone)
     for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,
                                               location_ip_forwarder,

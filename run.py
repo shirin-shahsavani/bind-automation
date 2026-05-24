@@ -3,7 +3,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def run_command(zone):
+def freeze_and_thaw_zone(zone):
     try:
         # TODO: what if one of the commands results in error?
         # Step 1: Freeze the zone
