@@ -111,31 +111,36 @@ def record_existance_check_delete(zone, new_record, new_record_type, record_valu
     """Retrieve zone data via AXFR transfer."""
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
-    if new_record_type in ["MX"]:
+
+    if new_record_type == "MX":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
-        attr_map = {"MX": "exchange", "NS": "target"}
+
         try:
-            answers = resolver.resolve(zone, new_record_type)
-            for rdata in answers:
-                value_in_server = str(getattr(rdata, attr_map[new_record_type])).rstrip('.')
-                if str(value_in_server.lower()) == str(record_value.rstrip('.').lower()):
-                    return True
+            answers = resolver.resolve(zone, "MX")
+
+        except Exception as e:
+            logger.warning(f"Error checking MX record: {e}")
             raise HTTPException(
-                status_code=404,
-                detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
+                status_code=502,
+                detail={
+                    "error": "Unable to verify MX record.",
+                    "reason": str(e)
+                }
             )
 
-            # return False
-        except HTTPException as e:
-            logger.warning(f"Error checking {new_record_type}: {e}")
-            raise HTTPException(
-                status_code=404,
-                detail={"error": "Your record deletion request failed."
-                                 "Reason: The record does not exist."}
-            )
+        for rdata in answers:
+            value_in_server = str(rdata.exchange).rstrip('.')
+            if str(value_in_server.lower()) == str(record_value.rstrip('.').lower()):
+                return True
 
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "Your record deletion request failed. "
+                         "Reason: The record does not exist."
+            }
+        )
 
     elif new_record_type in ["PTR"]:
         fqdn_name = f"{new_record}.{zone}."
