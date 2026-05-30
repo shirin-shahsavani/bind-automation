@@ -304,7 +304,6 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 status_code=403,
                 detail={"error": "Forwarder is not answering."}
             )
-            response = None
         resolved_ips = [str(item) for answer in response.answer for item in answer.items]
         if record_type == "A":
             if record_value not in resolved_ips:
