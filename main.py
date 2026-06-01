@@ -113,7 +113,7 @@ def get_location_ips(location: str):
     if not loc_data:
         logger.error(f"Invalid location in get_location_ips: {location}")
         raise HTTPException(
-            status_code=403,
+            status_code=404,
             detail={"error": "Invalid location provided", "location": location}
         )
     return loc_data["master"], loc_data["forwarders"]
