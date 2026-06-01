@@ -340,8 +340,8 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
             if record_value not in current_ptr:
                 current_retry_attempt = settings.MAX_RETRY
                 return current_retry_attempt
-        except:
-            logger.warning(f"DNS query failed. forwarder does not available")
+        except Exception as e:
+            logger.warning(f"DNS query failed: {e}")
             response = None
             raise HTTPException(
                 status_code=403,
