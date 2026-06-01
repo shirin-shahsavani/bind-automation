@@ -233,14 +233,14 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [dns_server]
-        mx_value = []
+        #mx_value = []
         try:
             answers = resolver.resolve(zone, "MX")
+            new_record_value = new_record_value.split()[1].rstrip('.')
             for rdata in answers:
                 rdata: MX
                 mx_record_in_server = str(rdata.exchange).rstrip('.')
-                new_record_value = new_record_value.split()[1].rstrip('.')
-                mx_value.append(new_record_value)
+                #mx_value.append(new_record_value)
                 if mx_record_in_server.lower() == new_record_value.lower():
                     current_retry_attempt = settings.MAX_RETRY
                     return current_retry_attempt
