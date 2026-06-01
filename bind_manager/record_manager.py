@@ -175,7 +175,7 @@ def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl, loca
 
 def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                      forwarders, operation_id):
-    logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
+    logger.info(f"Attempting to add CNAME record {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                     forwarders, operation_id)
     logger.info(f"CNAME record {new_record_value} successfully added to zone {zone}")
