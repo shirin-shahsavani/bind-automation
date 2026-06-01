@@ -26,30 +26,29 @@ lock = asyncio.Lock()
 
 
 class RecordDetail(BaseModel):
-    zone: str
-    record_name: str
-    record_value: str
-    priority: int = 10
-    ttl: int = 300
-    location: str
-    second_value: str = None
+    zone:str
+    record_name:str
+    record_value:str
+    priority:int = 10
+    ttl:int = 300
+    location:str
+    second_value : str = None
+    @field_validator("location")
+    @classmethod
+    def validate_location( cls , location: str):
+       if location not in settings.locations_ip:
+          logger.warning(f"Invalid location provided: {location}")
+          raise HTTPException(
+             status_code=404, #NOT_FOUND
+             detail={ "error": "This location does not exist", "location": location}
+        )
+       return location
+
 
 
 class CommandDetail(BaseModel):
     zone: str
     command: str
-
-
-@field_validator("location")
-def validate_location(cls, location: str):
-    if location not in settings.locations_ip:
-        logger.warning(f"Invalid location provided: {location}")
-        raise HTTPException(
-            status_code=404,  # NOT_FOUND
-            detail={"error": "This location does not exist", "location": location}
-        )
-    return location
-
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type: str, detail: RecordDetail, request: Request,
