@@ -465,14 +465,14 @@ def check_the_value(zone, record_name, record_type, record_value, location_ip_ma
             detail={"error": "Unable to verify record value"}
         ) from e
 
-def check_command_type(command):
-    if not command == "apply":
-        logger.warning(f"Command {command} is not supported!, Wrong request")
-        raise HTTPException(
-            status_code=406,
-            detail={"messege": "The command is not correct"}
-        )
-    logger.info(f"Command {command} is supported!")
+# def check_command_type(command):
+#     if not command == "apply":
+#         logger.warning(f"Command {command} is not supported!, Wrong request")
+#         raise HTTPException(
+#             status_code=406,
+#             detail={"messege": "The command is not correct"}
+#         )
+#     logger.info(f"Command {command} is supported!")
 
 
 

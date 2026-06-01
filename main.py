@@ -48,7 +48,7 @@ class RecordDetail(BaseModel):
 
 class CommandDetail(BaseModel):
     zone: str
-    command: str
+    #command: str
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type: str, detail: RecordDetail, request: Request,
@@ -119,12 +119,12 @@ def get_location_ips(location: str):
     return loc_data["master"], loc_data["forwarders"]
 
 
-@app.post("/{zone}/{command}/")
+@app.post("/{zone}/apply/")
 def freeze_and_thaw_zone_func(zone: str, command: str, detail: RecordDetail, request: Request,
                      token: Annotated[str | None, Header()] = None):
     location_ip_master = get_location_ips(detail.location)
     authenticate_user_master(request.client.host, token)
-    checker.check_command_type(command)
+    #checker.check_command_type(command)
     checker.zone_existance(zone, location_ip_master)
     freeze_and_thaw_zone(zone)
 
