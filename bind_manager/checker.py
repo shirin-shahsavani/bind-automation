@@ -440,7 +440,7 @@ def check_the_value(zone, record_name, record_type, record_value, location_ip_ma
             fqdn = f"{record_name}.{zone}".lower()
             answers = resolver.resolve(fqdn, record_type)
             resolved_ips = [str(answer) for answer in answers]
-            resolved_ips = str(resolved_ips)
+            #resolved_ips = str(resolved_ips)
             if record_type == "MX":
                 # Compare against MX exchange names
                 resolved_hosts = [str(answer.exchange).rstrip('.') for answer in answers]
@@ -453,15 +453,17 @@ def check_the_value(zone, record_name, record_type, record_value, location_ip_ma
             elif record_value not in resolved_ips:
                 raise HTTPException(
                     status_code=409,
-                    detail={"error": "Ip does not match"}
+                    detail={"error": "Record value does not match"}
                 )
-    except:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Your record deletion request failed."
-                             "Reason: The record is registered with a different address."}
-        )
+    except HTTPException:
+        raise
 
+    except Exception as e:
+        logger.error(f"DNS lookup failed: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "Unable to verify record value"}
+        ) from e
 
 def check_command_type(command):
     if not command == "apply":
