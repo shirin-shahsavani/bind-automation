@@ -59,11 +59,11 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
     """" Add A record and PTR record """
     try:
         ipaddress.IPv4Address(new_record_value)
-    except ValueError:
+    except ValueError as err:
         raise HTTPException(
             status_code=400,  # BAD_REQUEST
             detail={"error": "The provided value is not a valid IPv4 address.", "value": new_record_value}
-        )
+        ) from err
     logger.info(f"Adding A record: {new_record} -> {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                     forwarders, operation_id)
