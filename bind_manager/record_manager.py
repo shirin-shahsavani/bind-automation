@@ -86,7 +86,7 @@ def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl, loc
             logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
             raise HTTPException(
                 status_code=400,  # Bad request
-                detail={"error": "Invalid PTR record value. Last octet must be less than 254.",
+                detail={"error": "Invalid PTR record value. Last octet must be less than 255.",
                         "ptr_record": new_record}
             )
         ptr_records = get_all_ptr_records(zone, location_ip_master)
