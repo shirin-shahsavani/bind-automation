@@ -120,7 +120,7 @@ def get_location_ips(location: str):
 
 
 @app.post("/{zone}/apply/")
-def freeze_and_thaw_zone_func(zone: str, command: str, detail: RecordDetail, request: Request,
+def freeze_and_thaw_zone_func(zone: str , detail: RecordDetail, request: Request,
                      token: Annotated[str | None, Header()] = None):
     location_ip_master, _ = get_location_ips(detail.location)
     authenticate_user_master(request.client.host, token)
