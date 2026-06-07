@@ -423,7 +423,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         else:
             raise HTTPException(
                 status_code=403,
-                detail={"error": f"This record value does not exist ", "record_value": record_value}
+                detail={"error": "This record value does not exist", "record_value": record_value}
             )
     elif new_record_type == "CNAME":
         fqdn = f"{new_record}.{zone}.".lower()
@@ -440,7 +440,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         else:
             raise HTTPException(
                 status_code=403,
-                detail={"error": f"This record value does not exist ", "record_value": record_value}
+                detail={"error": "This record value does not exist", "record_value": record_value}
             )
 
     elif new_record_type == "MX":
