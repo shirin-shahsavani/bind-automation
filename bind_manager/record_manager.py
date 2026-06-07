@@ -557,7 +557,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                                        keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                        keyalgorithm=settings.KEY_ALGORITHM)
             update.delete(record_name, record_type, record_value)
-            answer = dns.query.tcp(update, location_ip_master)
+            dns.query.tcp(update, location_ip_master)
             freeze_and_thaw_zone(zone)
 
             update = dns.update.Update(zone,
