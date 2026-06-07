@@ -228,10 +228,9 @@ def verify_forwarder_after_record_add(
         ),
         "operation_id": operation_id,
     }
-    logger.info(type(settings.MAX_RETRY))
-    logger.info(settings.MAX_RETRY)
-    logger.info(type(current_retry_attempt))
-    logger.info(current_retry_attempt)
+
+    logger.debug(f"MAX_RETRY={settings.MAX_RETRY}, current_retry_attempt={current_retry_attempt}")
+
     while current_retry_attempt <= settings.MAX_RETRY:
         logger.info(f"Forwarder check attempt {current_retry_attempt}/{settings.MAX_RETRY} for {key_name}")
 
