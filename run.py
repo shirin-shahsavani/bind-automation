@@ -8,12 +8,12 @@ def freeze_and_thaw_zone(zone):
         # TODO: what if one of the commands results in error?
         # Step 1: Freeze the zone
         freeze_cmd = ["rndc", "freeze", zone]
-        result1 = subprocess.run(freeze_cmd, capture_output=True, text=True, check=True)
+        result1 = subprocess.run(freeze_cmd, capture_output=True, text=True, check=True, timeout=10)
         logger.info(f"Freeze successful for zone {zone}: {result1.stdout.strip()}")
 
         # Step 2: Thaw the zone
         thaw_cmd = ["rndc", "thaw", zone]
-        result2 = subprocess.run(thaw_cmd, capture_output=True, text=True, check=True)
+        result2 = subprocess.run(thaw_cmd, capture_output=True, text=True, check=True, timeout=10)
         logger.info(f"Thaw successful for zone {zone}: {result2.stdout.strip()}")
 
     except subprocess.CalledProcessError as e:
