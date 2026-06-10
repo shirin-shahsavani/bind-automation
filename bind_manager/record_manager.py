@@ -388,13 +388,12 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
         if not match:
             return
         update.delete(new_record, "PTR", match)
-        dns.query.tcp(update, location_ip_master)
+        #dns.query.tcp(update, location_ip_master)
     elif new_record_type == "CNAME":
         fqdn = f"{new_record}.{zone}.".lower()
         update.delete(fqdn, "CNAME")  # Delete entire RRset
     else:
         update.delete(new_record, new_record_type)
-    dns.query.tcp(update, location_ip_master)
     response = dns.query.tcp(update, location_ip_master)
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
