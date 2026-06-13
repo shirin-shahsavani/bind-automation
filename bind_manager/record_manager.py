@@ -35,11 +35,11 @@ def add_record(zone, new_record, new_record_type, new_record_value, ttl, priorit
             status_code=409,  # conflict
             detail={"error": "This record already exists with another address and cannot be added again. "}
         )
-    return add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+    return add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                               forwarders, operation_id)
 
 
-def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                        forwarders, operation_id):
     func_map = {
         "A": add_A_record,
@@ -52,10 +52,10 @@ def add_record_by_type(zone, new_record, new_record_type, new_record_value, ttl,
     }
 
     func = func_map.get(new_record_type)
-    return func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
+    return func(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master, forwarders, operation_id)
 
 
-def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id):
+def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master, forwarders, operation_id):
     """" Add A record and PTR record """
     try:
         ipaddress.IPv4Address(new_record_value)
@@ -77,7 +77,7 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl, locat
         logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
 
 
-def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                    forwarders, operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
     try:
@@ -135,7 +135,7 @@ def get_all_ptr_records(zone_name, location_ip_master):
         return iter([])  # empty generator
 
 
-def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                     forwarders, operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
     try:
@@ -152,7 +152,7 @@ def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl, lo
         )from e
 
 
-def add_TXT_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+def add_TXT_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                    forwarders, operation_id):
     logger.info(f"Attempting to add TXT record {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
@@ -160,20 +160,20 @@ def add_TXT_record(zone, new_record, new_record_type, new_record_value, ttl, loc
     logger.info(f"TXT record {new_record_value} successfully added to zone {zone}")
 
 
-def add_MX_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id, mx_priority=10):
-    new_record_value = f"{mx_priority} {new_record_value}."
+def add_MX_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master, forwarders, operation_id):
+    new_record_value = f"{priority} {new_record_value}."
     add_record_func(zone, "@", "MX", new_record_value, ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"MX record {new_record_value} successfully added to zone {zone}")
 
 
-def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,forwarders, operation_id):
+def add_NS_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,forwarders, operation_id):
     add_record_func(zone, f"{new_record}", "A", new_record_value, ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"A record {new_record_value} successfully added to zone {zone}")
     add_record_func(zone, "@", "NS", f"{new_record}.{zone}.", ttl, location_ip_master, forwarders, operation_id)
     logger.info(f"NS record {new_record_value} successfully added to zone {zone}")
 
 
-def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
+def add_CNAME_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
                      forwarders, operation_id):
     logger.info(f"Attempting to add CNAME record {new_record_value} in zone {zone}")
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
