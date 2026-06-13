@@ -344,15 +344,17 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
 
             current_ptr = [r.to_text() for r in answers]
             if record_value not in current_ptr:
-                current_retry_attempt = settings.MAX_RETRY
-                return current_retry_attempt
+                #current_retry_attempt = settings.MAX_RETRY
+                return settings.MAX_RETRY
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            return settings.MAX_RETRY
         except Exception as e:
             logger.warning(f"DNS query failed: {e}")
-            response = None
+            #response = None
             raise HTTPException(
                 status_code=403,
                 detail={"error": "Forwarder is not answering."}
-            )
+            ) from e
 
     if record_type in ["MX"]:
         dns_server = location_ip_forwarder
