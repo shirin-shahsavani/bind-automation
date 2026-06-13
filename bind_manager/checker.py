@@ -252,8 +252,6 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 if mx_record_in_server.lower() == new_record_value.lower():
                     current_retry_attempt = settings.MAX_RETRY
                     return current_retry_attempt
-                else:
-                    break
             return False
         except Exception as e:
             logger.warning(f"Error checking MX: {e}")
