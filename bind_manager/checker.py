@@ -110,7 +110,15 @@ def record_existance(zone, new_record, new_record_type, location_ip_master):
 def record_existance_check_delete(zone, new_record, new_record_type, record_value, location_ip_master):
     """Retrieve zone data via AXFR transfer."""
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
-    zone_data = dns.zone.from_xfr(dns.query.xfr(location_ip_master, zone, keyring=keyring, keyname=settings.KEY_NAME))
+    zone_data = dns.zone.from_xfr(
+        dns.query.xfr(
+            location_ip_master,
+            zone,
+            keyring=keyring,
+            keyname=dns.name.from_text(settings.KEY_NAME),
+            keyalgorithm=settings.KEY_ALGORITHM,
+        )
+    )
 
     if new_record_type == "MX":
         resolver = dns.resolver.Resolver()
