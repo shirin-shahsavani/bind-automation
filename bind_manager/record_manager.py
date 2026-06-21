@@ -94,8 +94,8 @@ def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl,prio
                    forwarders, operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
     try:
-        PTR_LAST_OCTET_LIMIT = 254
-        if int(new_record) > PTR_LAST_OCTET_LIMIT:
+        PTR_LAST_OCTET_LIMIT = 255
+        if not 0 < int(new_record) <= PTR_LAST_OCTET_LIMIT:
             logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
             raise HTTPException(
                 status_code=400,  # Bad request
