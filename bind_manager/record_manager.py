@@ -68,13 +68,26 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
     add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
                     forwarders, operation_id)
     if settings.AUTO_CREATE_PTR_FOR_A_RECORD:
-        ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
-        ptr_name = new_record_value.split(".")[-1]
-        ptr_value = f"{new_record}.{zone}."
-        logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
-        add_record_func(ptr_zone, ptr_name, "PTR", ptr_value, ttl, location_ip_master,
-                        forwarders, operation_id)
-        logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
+        try:
+            ptr_zone = ".".join(new_record_value.split(".")[:3][::-1]) + ".in-addr.arpa"
+            ptr_name = new_record_value.split(".")[-1]
+            ptr_value = f"{new_record}.{zone}."
+            logger.info(f"Adding PTR record: {ptr_name} -> {ptr_value} in zone {ptr_zone}")
+            add_record_func(ptr_zone, ptr_name, "PTR", ptr_value, ttl, location_ip_master,
+                            forwarders, operation_id)
+            logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
+        except Exception as e:
+            logger.error(f"PTR creation failed: {e}")
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "A record was created successfully but PTR record creation failed.",
+                    "a_record_created": True,
+                    "ptr_record_created": False,
+                    "ptr_error": str(e)
+                }
+            )
+
 
 
 def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
