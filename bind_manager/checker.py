@@ -210,7 +210,7 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
                 if expected_ip in normalized_resolved:
                     current_retry_attempt = settings.MAX_RETRY
                     return current_retry_attempt
-            except Exception as e:
+            except ValueError as e:
                 logger.warning(f"Invalid IPv6 address provided: {e}")
         elif new_record_type == "TXT":
             expected_txt = new_record_value.strip('"')
