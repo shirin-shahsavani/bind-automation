@@ -44,7 +44,22 @@ class RecordDetail(BaseModel):
         )
        return location
 
+class ApplyDetail(BaseModel):
+    location: str
 
+    @field_validator("location")
+    @classmethod
+    def validate_location(cls, location: str):
+        if location not in settings.locations_ip:
+            logger.warning(f"Invalid location provided: {location}")
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "This location does not exist",
+                    "location": location
+                }
+            )
+        return location
 
 class CommandDetail(BaseModel):
     zone: str
@@ -120,7 +135,7 @@ def get_location_ips(location: str):
 
 
 @app.post("/{zone}/apply/")
-def freeze_and_thaw_zone_func(zone: str , detail: RecordDetail, request: Request,
+def freeze_and_thaw_zone_func(zone: str , detail: ApplyDetail, request: Request,
                      token: Annotated[str | None, Header()] = None):
     location_ip_master, _ = get_location_ips(detail.location)
     authenticate_user_master(request.client.host, token)
