@@ -501,6 +501,11 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
 
         if response and response.answer:
             resolved_ips = [str(item) for answer in response.answer for item in answer.items]
+            if not resolved_ips:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"error": "No A record found for MX target."}
+                )
             update.delete(record_value, "A")
             dns.query.tcp(update, location_ip_master)
             freeze_and_thaw_zone(zone)
