@@ -484,6 +484,22 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
     else:
         freeze_and_thaw_zone(zone)
 
+def send_dns_update(update, location_ip_master, zone):
+    response = dns.query.tcp(update, location_ip_master)
+
+    if response.rcode() != dns.rcode.NOERROR:
+        error_text = dns.rcode.to_text(response.rcode())
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": f"DNS Update failed with rcode: {error_text}",
+                "zone": zone
+            }
+        )
+
+    return response
+
+
 
 def update_record(zone, record_name, record_type, new_record_value, record_value, ttl, location_ip_master,
                   forwarders, operation_id):
@@ -507,10 +523,12 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                     detail={"error": "No A record found for MX target."}
                 )
             update.delete(record_value, "A")
-            dns.query.tcp(update, location_ip_master)
+            #dns.query.tcp(update, location_ip_master)
+            send_dns_update(update, location_ip_master, zone)
             freeze_and_thaw_zone(zone)
             update.add(new_record_value, ttl, "A", resolved_ips[0])
-            dns.query.tcp(update, location_ip_master)
+            #dns.query.tcp(update, location_ip_master)
+            send_dns_update(update, location_ip_master, zone)
             freeze_and_thaw_zone(zone)
             # update.replace(record_name, ttl, record_type, new_record_value)
 
@@ -559,7 +577,8 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         #     dns.query.tcp(update, location_ip_master)
         #     freeze_and_thaw_zone(zone)
         update.add(new_record_value, ttl, "A", resolved_ips[0])
-        dns.query.tcp(update, location_ip_master)
+        #dns.query.tcp(update, location_ip_master)
+        send_dns_update(update, location_ip_master, zone)
         freeze_and_thaw_zone(zone)
         add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
     elif record_type == "PTR":
@@ -574,14 +593,15 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                                        keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                        keyalgorithm=settings.KEY_ALGORITHM)
             update.delete(record_name, record_type, record_value)
-            dns.query.tcp(update, location_ip_master)
+            #dns.query.tcp(update, location_ip_master)
+            send_dns_update(update, location_ip_master, zone)
             freeze_and_thaw_zone(zone)
 
             update = dns.update.Update(zone,
                                        keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                        keyalgorithm=settings.KEY_ALGORITHM)
             update.add(record_name, ttl, record_type, new_record_value)
-            dns.query.tcp(update, location_ip_master)
+            #dns.query.tcp(update, location_ip_master)
         else:
             raise HTTPException(
                 status_code=403,
@@ -592,7 +612,8 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                    keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
-        dns.query.tcp(update, location_ip_master)
+        #dns.query.tcp(update, location_ip_master)
+    send_dns_update(update, location_ip_master, zone)
     freeze_and_thaw_zone(zone)
     for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,
