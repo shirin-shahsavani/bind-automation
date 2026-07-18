@@ -34,7 +34,7 @@ def freeze_and_thaw_zone(zone):
                 logger.info(f"Recovery thaw successful for zone {zone}")
 
             except Exception as recovery_error:
-                logger.critical(f"Recovery thaw failed for zone {zone}: "f"{recovery_error}")
+                logger.critical(f"Recovery thaw failed for zone {zone}: {recovery_error}")
 
         raise RuntimeError(
             f"Failed to freeze/thaw zone {zone}"
