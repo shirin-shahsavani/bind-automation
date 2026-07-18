@@ -152,17 +152,16 @@ def add_AAAA_record(zone, new_record, new_record_type, new_record_value, ttl,pri
                     forwarders, operation_id):
     logger.info(f"Attempting to add AAAA record {new_record_value} in zone {zone}")
     try:
-        add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,
-                        forwarders, operation_id)
-        logger.info(f"AAAA record {new_record_value} successfully added to zone {zone}")
-
-
-    except Exception as e:
-        logger.error(f"Failed to add AAAA record: {e}")
+        ipaddress.IPv6Address(new_record_value)
+    except ValueError as e:
+        logger.error(f"Invalid IPv6 address: {e}")
         raise HTTPException(
-            status_code=400,  # BAD_REQUEST
+            status_code=400,
             detail={"error": "Invalid IPv6 address for AAAA record"}
-        )from e
+        ) from e
+    add_record_func(zone, new_record, new_record_type, new_record_value, ttl, location_ip_master,forwarders, operation_id)
+    logger.info(f"AAAA record added {new_record_value} in zone {zone}")
+
 
 
 def add_TXT_record(zone, new_record, new_record_type, new_record_value, ttl,priority, location_ip_master,
