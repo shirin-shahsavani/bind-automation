@@ -28,14 +28,20 @@ def freeze_and_thaw_zone(zone):
         if frozen:
             try:
                 logger.warning(f"Attempting recovery thaw for zone {zone}")
-
                 subprocess.run(["rndc", "thaw", zone],capture_output=True,text=True,check=True,timeout=10,)
-
                 logger.info(f"Recovery thaw successful for zone {zone}")
 
             except Exception as recovery_error:
-                logger.critical(f"Recovery thaw failed for zone {zone}: {recovery_error}")
+                logger.critical(
+                    f"Recovery thaw failed for zone {zone}: {recovery_error}. "
+                    f"Manual intervention required. Run: rndc thaw {zone}"
+                )
+                raise RuntimeError(
+                    f"Failed to freeze/thaw zone {zone}. "
+                    f"Recovery thaw also failed: {recovery_error}. "
+                    f"Manual intervention required. Run: rndc thaw {zone}."
+                ) from e
 
         raise RuntimeError(
-            f"Failed to freeze/thaw zone {zone}"
-        ) from e
+            f"Failed to freeze/thaw zone {zone}. "
+            ) from e
