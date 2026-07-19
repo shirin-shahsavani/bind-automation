@@ -531,10 +531,10 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
             freeze_and_thaw_zone(zone)
             # update.replace(record_name, ttl, record_type, new_record_value)
 
-        del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
-        mx_priority = "10"
-        new_record_value = f"{mx_priority} {new_record_value}"
-        add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
+            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
+            mx_priority = "10"
+            new_record_value = f"{mx_priority} {new_record_value}"
+            add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
 
     elif record_type == "NS":
         resolver = dns.resolver.Resolver()
