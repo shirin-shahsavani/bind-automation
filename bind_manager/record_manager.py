@@ -77,14 +77,27 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
                             forwarders, operation_id)
             logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
         except Exception as e:
-            logger.error(f"PTR creation failed: {e}")
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "message": "A record was created successfully but PTR record creation failed.",
-                    "a_record_created": True,
-                    "ptr_record_created": False,
-                    "ptr_error": str(e)
+            try:
+                delete_record(zone, new_record, new_record_type, new_record_value, location_ip_master)
+                logger.error(f"PTR creation failed: {e}")
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "message": "Adding PTR record failed. A record rolled back and deleted.",
+                        "a_record_created": False,
+                        "ptr_record_created": False,
+                        "ptr_error": str(e)
+                    }
+                )
+            except Exception as e:
+
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "message": "Adding PTR record failed. A record roll back failed.",
+                        "a_record_created":  True,
+                        "ptr_record_created": False,
+                         "ptr_error": str(e)
                 }
             )
 
