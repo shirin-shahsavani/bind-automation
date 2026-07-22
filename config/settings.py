@@ -8,44 +8,19 @@ class Settings(BaseSettings):
     KEY_SECRET:str
     KEY_ALGORITHM: str
 
-    #master
+    #master_Authentication
     KEY_NAME_MASTER: str
     KEY_SECRET_MASTER: str
     KEY_ALGORITHM_MASTER: str
     USER_AUTHENTICATION_KEY_MASTER:str
-
-
     MAX_RETRY:int
 
     # test
     TEST_MASTER: str
     TEST_SLAVE: str
-    TEST_FORWARDER_1: str
-    TEST_FORWARDER_2: str
+    TEST_FORWARDERS: str
 
-    # pardis
-    PARDIS_MASTER: str
-    PARDIS_SLAVE: str
-    PARDIS_FORWARDER_1: str
-    PARDIS_FORWARDER_2: str
-
-    # sandbox
-    SANDBOX_MASTER: str
-    SANDBOX_SLAVE: str
-    SANDBOX_FORWARDER_1: str
-    SANDBOX_FORWARDER_2: str
-
-    # khatam
-    KHATAM_MASTER: str
-    KHATAM_SLAVE: str
-    KHATAM_FORWARDER_1: str
-    KHATAM_FORWARDER_2: str
-
-    # bank
-    BANK_MASTER: str
-    BANK_SLAVE: str
-    BANK_FORWARDER_1: str
-    BANK_FORWARDER_2: str
+    AUTO_CREATE_PTR_FOR_A_RECORD: bool = True
 
     class Config:
         env_file = ".env"
@@ -56,34 +31,17 @@ class Settings(BaseSettings):
             "test": {
                 "master": self.TEST_MASTER,
                 "slave": self.TEST_SLAVE,
-                "forwarder_1": self.TEST_FORWARDER_1,
-                "forwarder_2": self.TEST_FORWARDER_2,
-            },
-            "pardis": {
-                "master": self.PARDIS_MASTER,
-                "slave": self.PARDIS_SLAVE,
-                "forwarder_1": self.PARDIS_FORWARDER_1,
-                "forwarder_2": self.PARDIS_FORWARDER_2,
-            },
-            "sandbox": {
-                "master": self.SANDBOX_MASTER,
-                "slave": self.SANDBOX_SLAVE,
-                "forwarder_1": self.SANDBOX_FORWARDER_1,
-                "forwarder_2": self.SANDBOX_FORWARDER_2,
-            },
-            "khatam": {
-                "master": self.KHATAM_MASTER,
-                "slave": self.KHATAM_SLAVE,
-                "forwarder_1": self.KHATAM_FORWARDER_1,
-                "forwarder_2": self.KHATAM_FORWARDER_2,
-            },
-            "bank": {
-                "master": self.BANK_MASTER,
-                "slave": self.BANK_SLAVE,
-                "forwarder_1": self.BANK_FORWARDER_1,
-                "forwarder_2": self.BANK_FORWARDER_2,
+                "forwarders": [
+                   ip.strip()
+                   for ip in self.TEST_FORWARDERS.split(",")
+                   if ip.strip()
+                   ],
             },
         }
 
 
 settings = Settings()
+
+
+
+
