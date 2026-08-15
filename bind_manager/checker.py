@@ -319,14 +319,23 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
                 logger.info(f"Record {fqdn} is still exist. Found: {resolved_ips}")
         if record_type == "AAAA":
             try:
-                if record_value not in resolved_ips:
+                expected_ip = ipaddress.IPv6Address(record_value.strip())
+                resolved_ipv6_set = {
+                ipaddress.IPv6Address(ip.strip()) for ip in resolved_ips
+                }
+
+                if expected_ip not in resolved_ipv6_set:
                     current_retry_attempt = settings.MAX_RETRY
                     return current_retry_attempt
                 else:
                     logger.error(f"Record {fqdn} is still exist. Found: {resolved_ips}")
 
-            except Exception as e:
+            except ValueError as e:
                 logger.error(f"Invalid IPv6 address provided: {e}")
+                raise HTTPException(
+                    status_code=400,
+                    detail={"error": f"Invalid IPv6 address format: '{record_value}'"}
+                )
 
         if record_type == "TXT":
             expected_txt = record_value.strip('"')
