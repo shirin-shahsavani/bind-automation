@@ -568,7 +568,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         else:
             raise HTTPException(
                 status_code=403,
-                detail={"error": f"This record value does not exist ", "record_value": record_value}
+                detail={"error": "This record value does not exist ", "record_value": record_value}
             )
 
         query = dns.message.make_query(record_value, dns.rdatatype.from_text("A"))
@@ -620,7 +620,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         else:
             raise HTTPException(
                 status_code=403,
-                detail={"error": f"This record value does not exist ", "record_value": record_value}
+                detail={"error": "This record value does not exist ", "record_value": record_value}
             )
 
     else:
@@ -671,7 +671,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
-            logger.info(f"🟢 Forwarder verification loop completed.")
+            logger.info("🟢 Forwarder verification loop completed.")
             return None
 
 
