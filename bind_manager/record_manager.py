@@ -77,21 +77,21 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
                             forwarders, operation_id)
             logger.info(f"PTR record {ptr_name} successfully added to zone {ptr_zone}")
         except Exception as e:
+            logger.error(f"PTR creation failed: {e}")
             try:
                 delete_record(zone, new_record, new_record_type, new_record_value, location_ip_master)
-                logger.error(f"PTR creation failed: {e}")
+                #logger.error(f"PTR creation failed: {e}")
+            except Exception as rollback_err:
                 raise HTTPException(
                     status_code=409,
                     detail={
                         "message": "Adding PTR record failed. A record rolled back and deleted.",
                         "a_record_created": False,
                         "ptr_record_created": False,
-                        "ptr_error": str(e)
+                        "ptr_error": str(rollback_err)
                     }
-                )
-            except Exception as e:
-
-                raise HTTPException(
+                ) from rollback_err
+        raise HTTPException(
                     status_code=409,
                     detail={
                         "message": "Adding PTR record failed. A record roll back failed.",
@@ -99,7 +99,7 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
                         "ptr_record_created": False,
                          "ptr_error": str(e)
                 }
-            )
+        )  from e
 
 
 
@@ -107,7 +107,7 @@ def add_PTR_record(zone, new_record, new_record_type, new_record_value, ttl,prio
                    forwarders, operation_id):
     logger.info(f"Attempting to add PTR record {new_record_value} in zone {zone}")
     try:
-        PTR_LAST_OCTET_LIMIT = 255
+        PTR_LAST_OCTET_LIMIT = 254
         if not 0 < int(new_record) <= PTR_LAST_OCTET_LIMIT:
             logger.error(f"PTR record {new_record} exceeds limit {PTR_LAST_OCTET_LIMIT}")
             raise HTTPException(
@@ -211,7 +211,7 @@ def add_record_func(zone, new_record, new_record_type, new_record_value, ttl, lo
     update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                keyalgorithm=settings.KEY_ALGORITHM)
     update.add(new_record, ttl, new_record_type, new_record_value)
-    response = dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master , timeout=10)
     if response.rcode() != dns.rcode.NOERROR:
        error_text = dns.rcode.to_text(response.rcode())
        raise HTTPException(
@@ -419,7 +419,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
         update.delete(fqdn, "CNAME")  # Delete entire RRset
     else:
         update.delete(new_record, new_record_type)
-    response = dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master ,timeout=10)
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
         raise HTTPException(
@@ -486,7 +486,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         update.delete(new_record, "MX", match)
     else:
         update.delete(new_record, new_record_type)
-    response = dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master,timeout=10)
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
         raise HTTPException(
@@ -497,7 +497,7 @@ def del_record_for_deletation(zone, new_record, new_record_type, record_value, l
         freeze_and_thaw_zone(zone)
 
 def send_dns_update(update, location_ip_master, zone):
-    response = dns.query.tcp(update, location_ip_master)
+    response = dns.query.tcp(update, location_ip_master,timeout=10)
 
     if response.rcode() != dns.rcode.NOERROR:
         error_text = dns.rcode.to_text(response.rcode())
