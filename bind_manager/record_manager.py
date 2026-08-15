@@ -296,6 +296,7 @@ def verify_forwarder_after_record_add(
 
         elif current_retry_attempt == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
+            values_for_multiple_records.pop(key_name, None)
             return None
 
 
@@ -355,6 +356,7 @@ def verify_forwarder_after_record_update(
 
         elif current_retry_attempt == settings.MAX_RETRY:
             logger.info(f"🟢 Forwarder verification loop completed for {key_name}")
+            values_for_multiple_records.pop(key_name, None)
             return None
 
 
