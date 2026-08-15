@@ -540,6 +540,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
             #dns.query.tcp(update, location_ip_master)
             send_dns_update(update, location_ip_master, zone)
             freeze_and_thaw_zone(zone)
+            update = dns.update.Update(zone,keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),keyalgorithm=settings.KEY_ALGORITHM)   ####
             update.add(new_record_value, ttl, "A", resolved_ips[0])
             #dns.query.tcp(update, location_ip_master)
             send_dns_update(update, location_ip_master, zone)
