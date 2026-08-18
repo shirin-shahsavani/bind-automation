@@ -86,7 +86,7 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
                     status_code=409,
                     detail={
                         "message": "Adding PTR record failed. A record rolled back and deleted.",
-                        "a_record_created": False,
+                        "a_record_created": True,
                         "ptr_record_created": False,
                         "ptr_error": str(rollback_err)
                     }
@@ -95,7 +95,7 @@ def add_A_record(zone, new_record, new_record_type, new_record_value, ttl,priori
                     status_code=409,
                     detail={
                         "message": "Adding PTR record failed. A record roll back failed.",
-                        "a_record_created":  True,
+                        "a_record_created":  False,
                         "ptr_record_created": False,
                          "ptr_error": str(e)
                 }
