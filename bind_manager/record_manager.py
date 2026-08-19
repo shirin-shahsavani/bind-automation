@@ -596,6 +596,8 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         send_dns_update(update, location_ip_master, zone)
         freeze_and_thaw_zone(zone)
         add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
+        #freeze_and_thaw_zone(zone)
+
     elif record_type == "PTR":
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [location_ip_master]
@@ -616,6 +618,8 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                                        keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                        keyalgorithm=settings.KEY_ALGORITHM)
             update.add(record_name, ttl, record_type, new_record_value)
+            send_dns_update(update, location_ip_master, zone)
+            freeze_and_thaw_zone(zone)
             #dns.query.tcp(update, location_ip_master)
         else:
             raise HTTPException(
@@ -627,9 +631,10 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
         update = dns.update.Update(zone, keyring=dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET}),
                                    keyalgorithm=settings.KEY_ALGORITHM)
         update.replace(record_name, ttl, record_type, new_record_value)
+        send_dns_update(update, location_ip_master, zone)
+        freeze_and_thaw_zone(zone)
         #dns.query.tcp(update, location_ip_master)
-    send_dns_update(update, location_ip_master, zone)
-    freeze_and_thaw_zone(zone)
+
     for location_ip_forwarder in forwarders:
         verify_forwarder_after_record_update(zone, record_name, record_type, new_record_value, ttl, location_ip_master,
                                               location_ip_forwarder,
