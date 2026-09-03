@@ -16,8 +16,6 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
-# max_retry=settings.MAX_RETRY
-
 def check_record_type(record_type):
     if record_type not in ["A", "AAAA", "NS", "MX", "CNAME", "TXT", "PTR"]:
         raise HTTPException(
