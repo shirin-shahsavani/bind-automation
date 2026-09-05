@@ -1,11 +1,11 @@
 import time
 import httpx
 from fastapi import HTTPException
-import dns.query  # to use axfr
-import dns.zone  # Access zone's data
-import dns.update  # add record
-import dns.tsigkeyring  # authenticate
-import dns.resolver  # chech zone
+import dns.query
+import dns.zone
+import dns.update
+import dns.tsigkeyring
+import dns.resolver
 import dns.rdatatype
 import dns.reversename
 from cryptography.fernet import Fernet

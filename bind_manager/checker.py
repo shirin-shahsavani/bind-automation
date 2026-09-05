@@ -1,10 +1,10 @@
 import logging
 from fastapi import HTTPException
 from config import settings
-import dns.query  # to use axfr
-import dns.zone  # Access zone's data
-import dns.tsigkeyring  # authenticate
-import dns.resolver  # chech zone
+import dns.query
+import dns.zone
+import dns.tsigkeyring
+import dns.resolver
 import dns.rdatatype
 import ipaddress
 import dns.message
