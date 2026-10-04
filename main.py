@@ -76,8 +76,18 @@ async def add_record(record_type: str, detail: RecordDetail, request: Request,
         authenticate_user(request.client.host, token)
         location_ip_master, forwarders = get_location_ips(detail.location)
         operation_id = str(uuid.uuid4())
-        record_manager.add_record(detail.zone, detail.record_name, record_type.upper(), detail.record_value, detail.ttl,
-                                  detail.priority, location_ip_master, forwarders, operation_id=operation_id)
+        await asyncio.to_thread(
+            record_manager.add_record,
+            detail.zone,
+            detail.record_name,
+            record_type.upper(),
+            detail.record_value,
+            detail.ttl,
+            detail.priority,
+            location_ip_master,
+            forwarders,
+            operation_id=operation_id,
+        )
         logger.info(f"Record added successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
         return JSONResponse(content={
             "message": "Record created successfully."
@@ -95,8 +105,16 @@ async def delete_record(record_type: str, detail: RecordDetail, request: Request
         authenticate_user(request.client.host, token)
         location_ip_master, forwarders = get_location_ips(detail.location)
         operation_id = str(uuid.uuid4())
-        record_manager.del_record(detail.zone, detail.record_name, record_type.upper(), detail.record_value, detail.ttl,
-                                  detail.priority, location_ip_master, forwarders, operation_id=operation_id)
+        await asyncio.to_thread(record_manager.del_record,
+                                detail.zone,
+                                detail.record_name,
+                                record_type.upper(),
+                                detail.record_value,
+                                detail.ttl,
+                                detail.priority,
+                                location_ip_master,
+                                forwarders,
+                                operation_id=operation_id, )
         logger.info(f"Record deleted successfully: {detail.record_name}.{detail.zone} -> {detail.record_value}")
         return JSONResponse(content={
             "message": "The record was successfully deleted."
@@ -114,9 +132,19 @@ async def update_record(record_type: str, detail: RecordDetail, request: Request
         authenticate_user(request.client.host, token)
         location_ip_master, forwarders = get_location_ips(detail.location)
         operation_id = str(uuid.uuid4())
-        record_manager.update_record_progress(detail.zone, detail.record_name, record_type.upper(), detail.record_value,
-                                              detail.second_value, detail.ttl, detail.priority, location_ip_master,
-                                              forwarders, operation_id=operation_id)
+        await asyncio.to_thread(
+            record_manager.update_record_progress,
+            detail.zone,
+            detail.record_name,
+            record_type.upper(),
+            detail.record_value,
+            detail.second_value,
+            detail.ttl,
+            detail.priority,
+            location_ip_master,
+            forwarders,
+            operation_id=operation_id,
+        )
         logger.info(f"Record updated successfully: {detail.record_name}.{detail.zone} -> {detail.second_value}")
         return JSONResponse(content={
             "message": "The record value was successfully updated."
