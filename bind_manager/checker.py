@@ -1,6 +1,6 @@
 import logging
 from fastapi import HTTPException
-from config import settings
+#from config import settings
 import dns.query
 import dns.zone
 import dns.tsigkeyring
@@ -239,14 +239,12 @@ def check_forwarder_for_adding(zone, new_record, new_record_type, new_record_val
         dns_server = location_ip_forwarder
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [dns_server]
-        #mx_value = []
         try:
             answers = resolver.resolve(zone, "MX")
             new_record_value = new_record_value.split()[1].rstrip('.')
             for rdata in answers:
                 rdata: MX
                 mx_record_in_server = str(rdata.exchange).rstrip('.')
-                #mx_value.append(new_record_value)
                 if mx_record_in_server.lower() == new_record_value.lower():
                     current_retry_attempt = settings.MAX_RETRY
                     return current_retry_attempt
@@ -351,13 +349,11 @@ def check_forwarder_del(zone, new_record, record_type, record_value, location_ip
 
             current_ptr = [r.to_text() for r in answers]
             if record_value not in current_ptr:
-                #current_retry_attempt = settings.MAX_RETRY
                 return settings.MAX_RETRY
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
             return settings.MAX_RETRY
         except Exception as e:
             logger.warning(f"DNS query failed: {e}")
-            #response = None
             raise HTTPException(
                 status_code=403,
                 detail={"error": "Forwarder is not answering."}
@@ -480,14 +476,6 @@ def check_the_value(zone, record_name, record_type, record_value, location_ip_ma
             detail={"error": "Unable to verify record value"}
         ) from e
 
-# def check_command_type(command):
-#     if not command == "apply":
-#         logger.warning(f"Command {command} is not supported!, Wrong request")
-#         raise HTTPException(
-#             status_code=406,
-#             detail={"messege": "The command is not correct"}
-#         )
-#     logger.info(f"Command {command} is supported!")
 
 
 

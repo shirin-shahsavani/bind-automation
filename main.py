@@ -1,7 +1,6 @@
 ##################Libraries####################
 import asyncio
 import logging
-from typing import Annotated
 from pydantic import BaseModel, field_validator
 from fastapi import FastAPI, Header, Request, HTTPException
 from bind_manager import record_manager
@@ -63,7 +62,6 @@ class ApplyDetail(BaseModel):
 
 class CommandDetail(BaseModel):
     zone: str
-    #command: str
 
 @app.post("/add/{record_type}/")
 async def add_record(record_type: str, detail: RecordDetail, request: Request,
@@ -167,7 +165,6 @@ def freeze_and_thaw_zone_func(zone: str , detail: ApplyDetail, request: Request,
                      token: Annotated[str | None, Header()] = None):
     authenticate_user_master(request.client.host, token)
     location_ip_master, _ = get_location_ips(detail.location)
-    #checker.check_command_type(command)
     checker.zone_existence(zone, location_ip_master)
     freeze_and_thaw_zone(zone)
 
