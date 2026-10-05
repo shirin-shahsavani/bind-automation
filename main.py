@@ -168,7 +168,7 @@ def freeze_and_thaw_zone_func(zone: str , detail: ApplyDetail, request: Request,
     authenticate_user_master(request.client.host, token)
     location_ip_master, _ = get_location_ips(detail.location)
     #checker.check_command_type(command)
-    checker.zone_existance(zone, location_ip_master)
+    checker.zone_existence(zone, location_ip_master)
     freeze_and_thaw_zone(zone)
 
 

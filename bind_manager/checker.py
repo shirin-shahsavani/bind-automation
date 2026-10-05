@@ -24,7 +24,7 @@ def check_record_type(record_type):
         )
 
 
-def zone_existance(zone, location_ip_master):
+def zone_existence (zone, location_ip_master):
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [location_ip_master]
     try:
@@ -37,7 +37,7 @@ def zone_existance(zone, location_ip_master):
         )
 
 
-def record_existance(zone, new_record, new_record_type, location_ip_master):
+def record_existence(zone, new_record, new_record_type, location_ip_master):
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     if new_record_type == "PTR":
         return False
@@ -105,7 +105,7 @@ def record_existance(zone, new_record, new_record_type, location_ip_master):
         return False
 
 
-def record_existance_check_delete(zone, new_record, new_record_type, record_value, location_ip_master):
+def record_existence_check_delete(zone, new_record, new_record_type, record_value, location_ip_master):
     """Retrieve zone data via AXFR transfer."""
     keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
     zone_data = dns.zone.from_xfr(
