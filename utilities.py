@@ -7,6 +7,11 @@ from config.settings import settings
 def authenticate_user(real_ip, token):
     key = settings.KEY_AUTH_USER
     cipher_suite = Fernet(key)
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail={"message": "Authentication token required"}
+        )
     try:
         token_ip = cipher_suite.decrypt(token)
     except InvalidToken:
