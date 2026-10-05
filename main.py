@@ -1,4 +1,4 @@
-##################Libararies####################
+##################Libraries####################
 import asyncio
 import logging
 from typing import Annotated
