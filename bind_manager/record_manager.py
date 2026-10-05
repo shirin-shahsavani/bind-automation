@@ -291,7 +291,7 @@ def verify_forwarder_after_record_add(
             raise HTTPException(
                 status_code=502,
                 detail={
-                    "error": f"ِForwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
+                    "error": f"Forwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
@@ -351,7 +351,7 @@ def verify_forwarder_after_record_update(
 
             raise HTTPException(
                 status_code=502,
-                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
+                detail={"error": f"Forwarder {location_ip_forwarder} is not synced with the master."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
@@ -672,7 +672,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             logger.error(f"Forwarder {location_ip_forwarder} did not sync.")
             raise HTTPException(
                 status_code=502,
-                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
+                detail={"error": f"Forwarder {location_ip_forwarder} is not synced with the master."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
