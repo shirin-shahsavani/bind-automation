@@ -4,12 +4,10 @@ import os
 
 def setup_logging(level=logging.INFO):
 
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    log_dir = os.path.join(base_dir, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, "app.log")
-
+    log_file = os.getenv("LOG_FILE", "config/logs/app.log")
+    log_dir = os.path.dirname(log_file)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
     """Configure application-wide logging."""
     logging.basicConfig(
         level=level,
