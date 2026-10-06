@@ -21,15 +21,19 @@ def mock_dns(monkeypatch):
     monkeypatch.setattr("dns.query.tcp", MagicMock(return_value=MagicMock(rcode=lambda: 0)))
     monkeypatch.setattr("dns.rcode.NOERROR", 0)
     monkeypatch.setattr("dns.rcode.to_text", lambda x: "NOERROR")
-    monkeypatch.setattr("bind_manager.record_manager.run_apply", MagicMock())
     monkeypatch.setattr("bind_manager.record_manager.verify_forwarder_after_record_add", MagicMock())
     return
 
 
 def test_add_record_success(mock_checker, mock_dns):
     """ Test that add_record calls add_record_by_type when record does not exist."""
-    mock_checker.record_existance.return_value = False
+    mock_checker.record_existence.return_value = False
     mock_add_by_type = MagicMock()
+
+    test_location = record_manager.settings.locations_ip["test"]
+    master = test_location["master"]
+    forwarders = test_location["forwarders"]
+
     with patch("bind_manager.record_manager.add_record_by_type", mock_add_by_type):
         record_manager.add_record(
             zone="example.com",
@@ -38,19 +42,23 @@ def test_add_record_success(mock_checker, mock_dns):
             new_record_value="192.168.55.10",
             ttl=300,
             priority=None,
-            location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.229",
-            location_ip_forwarder_2="10.60.110.230",
+            location_ip_master=master,
+            forwarders=forwarders,
+            operation_id="test-operation-1",
         )
 
     mock_checker.check_record_type.assert_called_once_with("A")
-    mock_checker.zone_existance.assert_called_once_with("example.com", "10.60.110.227")
+    mock_checker.zone_existence.assert_called_once_with("example.com", master,)
     mock_add_by_type.assert_called_once()
 
 
 def test_add_record_exists(mock_checker):
     """ Test that add_record raises HTTPException when record already exists."""
     mock_checker.record_existance.return_value = True
+
+    test_location = record_manager.settings.locations_ip["test"]
+    master = test_location["master"]
+    forwarders = test_location["forwarders"]
 
     with pytest.raises(HTTPException) as exc_info:
         record_manager.add_record(
@@ -60,13 +68,13 @@ def test_add_record_exists(mock_checker):
             new_record_value="192.168.1.10",
             ttl=300,
             priority=None,
-            location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.229",
-            location_ip_forwarder_2="10.60.110.230",
+            location_ip_master=master,
+            forwarders=forwarders,
+            operation_id="test-operation-1",
         )
 
-    assert exc_info.value.status_code == 404
-    assert "درخواست شما با خطا مواجه شد" in str(exc_info.value.detail)
+    assert exc_info.value.status_code == 409
+    assert "This record already exists" in str(exc_info.value.detail)
 
 
 def test_add_record_by_type_calls_correct_func(monkeypatch):
@@ -74,24 +82,44 @@ def test_add_record_by_type_calls_correct_func(monkeypatch):
     mock_add_A = MagicMock()
     monkeypatch.setattr("bind_manager.record_manager.add_A_record", mock_add_A)
 
+    test_location = record_manager.settings.locations_ip["test"]
+    master = test_location["master"]
+    forwarders = test_location["forwarders"]
+
     record_manager.add_record_by_type(
         zone="example.com",
         new_record="www",
         new_record_type="A",
         new_record_value="192.168.1.10",
         ttl=300,
-        location_ip_master="10.60.110.227",
-        location_ip_forwarder_1="10.60.110.229",
-        location_ip_forwarder_2="10.60.110.230",
+        priority=None,
+        location_ip_master=master,
+        forwarders=forwarders,
+        operation_id="test-operation-1",
     )
 
-    mock_add_A.assert_called_once()
-
+    mock_add_A.assert_called_once_with(
+        "example.com",
+        "www",
+        "A",
+        "192.168.1.10",
+        300,
+        None,
+        master,
+        forwarders,
+        "test-operation-1",
+    )
 
 def test_add_PTR_record_invalid_octet(monkeypatch):
     """ Test PTR record fails when octet > 254."""
     mock_get_ptr = MagicMock(return_value=[])
     monkeypatch.setattr("bind_manager.record_manager.get_all_ptr_records", mock_get_ptr)
+
+
+    test_location = record_manager.settings.locations_ip["test"]
+    master = test_location["master"]
+    forwarders = test_location["forwarders"]
+
 
     with pytest.raises(HTTPException) as exc_info:
         record_manager.add_PTR_record(
@@ -100,13 +128,13 @@ def test_add_PTR_record_invalid_octet(monkeypatch):
             new_record_type="PTR",
             new_record_value="www.example.com.",
             ttl=300,
-            location_ip_master="10.60.110.227",
-            location_ip_forwarder_1="10.60.110.229",
-            location_ip_forwarder_2="10.60.110.230",
+            priority=None,
+            location_ip_master=master,
+            forwarders=forwarders,
+            operation_id="test-operation-1",
         )
 
-    assert "مقدار رکورد بیشتر از 254 میباشد" in str(exc_info.value.detail)
-
+    assert exc_info.value.status_code == 400
 
 def test_get_all_ptr_records(monkeypatch):
     """📦 Test that get_all_ptr_records returns iterator on success."""
