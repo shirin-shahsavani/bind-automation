@@ -1,10 +1,17 @@
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
+
+from config.logging_config import logger
 from config.settings import settings
 
 def authenticate_user(real_ip, token):
     key = settings.KEY_AUTH_USER
     cipher_suite = Fernet(key)
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail={"message": "Authentication token required"}
+        )
     try:
         token_ip = cipher_suite.decrypt(token)
     except InvalidToken:
@@ -32,6 +39,30 @@ def generate_token(ip: str) -> str:
 
 
 
+def authenticate_user_master(real_ip, token):
+    key = settings.USER_AUTHENTICATION_KEY_MASTER
+    if token is None:
+        logger.error("Authentication token is missing")
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Authentication token is required"}
+        )
+
+    cipher_suite = Fernet(key)
+    try:
+        token_ip = cipher_suite.decrypt(token.encode())
+    except InvalidToken as err:
+        logger.error("Invalid or tampered token")
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Invalid or tampered token"}
+        )from err
+
+    if token_ip.decode("utf-8") != real_ip:
+        logger.error("Token IP mismatch")
+        raise HTTPException(status_code=403, detail={"message": "Invalid token"})
+
+    logger.info("Authentication successful")
 
 
 

@@ -28,8 +28,8 @@ keyring = dns.tsigkeyring.from_text({settings.KEY_NAME: settings.KEY_SECRET})
 def add_record(zone, new_record, new_record_type, new_record_value, ttl, priority, location_ip_master,
                forwarders, operation_id):
     checker.check_record_type(new_record_type)  ###Checking for correct type
-    checker.zone_existence(zone, location_ip_master)  ###Check if the zone exists in nameserver
-    record_exist = checker.record_existence(zone, new_record, new_record_type, location_ip_master)
+    checker.zone_existance(zone, location_ip_master)  ###Check if the zone exists in nameserver
+    record_exist = checker.record_existance(zone, new_record, new_record_type, location_ip_master)
     if record_exist:
         raise HTTPException(
             status_code=409,  # conflict
@@ -291,7 +291,7 @@ def verify_forwarder_after_record_add(
             raise HTTPException(
                 status_code=502,
                 detail={
-                    "error": f"Forwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
+                    "error": f"ِForwarder {location_ip_forwarder} is not synced with the master. The operation was rolled back."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
@@ -351,7 +351,7 @@ def verify_forwarder_after_record_update(
 
             raise HTTPException(
                 status_code=502,
-                detail={"error": f"Forwarder {location_ip_forwarder} is not synced with the master."},
+                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
@@ -362,8 +362,8 @@ def verify_forwarder_after_record_update(
 
 def delete_record_logic(zone, record_name, record_type, record_value, location_ip_master, location_ip_forwarder):
     checker.check_record_type(record_type)
-    checker.zone_existence(zone, location_ip_master)
-    checker.record_existence_check_delete(zone, record_name, record_type, record_value, location_ip_master)
+    checker.zone_existance(zone, location_ip_master)
+    checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
     delete_record(zone, record_name, record_type, record_value, location_ip_master)
 
 
@@ -431,7 +431,7 @@ def delete_record(zone, new_record, new_record_type, record_value, location_ip_m
     freeze_and_thaw_zone(zone)
 
 
-def del_record_for_deletion(zone, new_record, new_record_type, record_value, location_ip_master, operation_id):
+def del_record_for_deletation(zone, new_record, new_record_type, record_value, location_ip_master, operation_id):
     update = dns.update.Update(zone, keyring=keyring, keyalgorithm=settings.KEY_ALGORITHM)
     if new_record_type == "NS":
         resolver = dns.resolver.Resolver()
@@ -547,7 +547,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
             freeze_and_thaw_zone(zone)
             # update.replace(record_name, ttl, record_type, new_record_value)
 
-            del_record_for_deletion(zone, record_name, record_type, record_value, location_ip_master, operation_id)
+            del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
             mx_priority = "10"
             new_record_value = f"{mx_priority} {new_record_value}"
             add_record_func(zone, "@", record_type, new_record_value, ttl, location_ip_master, forwarders, operation_id)
@@ -587,7 +587,7 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
                 status_code=404,
                 detail={"error": f"No record found for {record_value}"}
             )
-        #     del_record_for_deletion(zone, record_name, record_type, record_value, location_ip_master,operation_id)
+        #     del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master,operation_id)
         #     update.delete(record_value, "A")
         #     dns.query.tcp(update, location_ip_master)
         #     freeze_and_thaw_zone(zone)
@@ -643,9 +643,9 @@ def update_record(zone, record_name, record_type, new_record_value, record_value
 
 def del_record(zone, record_name, record_type, record_value, ttl, priority, location_ip_master, forwarders, operation_id):
     checker.check_record_type(record_type)
-    checker.zone_existence(zone, location_ip_master)
-    checker.record_existence_check_delete(zone, record_name, record_type, record_value, location_ip_master)
-    del_record_for_deletion(zone, record_name, record_type, record_value, location_ip_master, operation_id)
+    checker.zone_existance(zone, location_ip_master)
+    checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
+    del_record_for_deletation(zone, record_name, record_type, record_value, location_ip_master, operation_id)
     for location_ip_forwarder in forwarders:
         check_forwarder_after_deletation(zone, record_name, record_type, record_value, ttl, location_ip_master,
                                          location_ip_forwarder,
@@ -672,7 +672,7 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
             logger.error(f"Forwarder {location_ip_forwarder} did not sync.")
             raise HTTPException(
                 status_code=502,
-                detail={"error": f"Forwarder {location_ip_forwarder} is not synced with the master."},
+                detail={"error": f"ِForwarder {location_ip_forwarder} is not synced with the master."},
             )
 
         elif current_retry_attempt == settings.MAX_RETRY:
@@ -683,8 +683,8 @@ def check_forwarder_after_deletation(zone, record_name, record_type, record_valu
 def update_record_progress(zone, record_name, record_type, record_value, second_value, ttl, priority, location_ip_master,
                             forwarders, operation_id):
     checker.check_record_type(record_type)
-    checker.zone_existence(zone, location_ip_master)
-    checker.record_existence_check_delete(zone, record_name, record_type, record_value, location_ip_master)
+    checker.zone_existance(zone, location_ip_master)
+    checker.record_existance_check_delete(zone, record_name, record_type, record_value, location_ip_master)
     update_record(zone, record_name, record_type, second_value, record_value, ttl, location_ip_master,
                   forwarders, operation_id)
 
